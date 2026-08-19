@@ -1,0 +1,13 @@
+[Unit]
+Description=ginkgo WiFi CN regulatory and stable MAC
+After=ginkgo-mpss.service NetworkManager.service sys-subsystem-net-devices-wlan0.device
+Wants=ginkgo-mpss.service
+ConditionPathExists=/sys/class/net/wlan0
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/ginkgo-wifi-setup.sh
+
+[Install]
+WantedBy=multi-user.target

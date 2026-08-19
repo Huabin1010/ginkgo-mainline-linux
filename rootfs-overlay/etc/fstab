@@ -1,0 +1,5 @@
+# <file system>  <mount point>  <type>  <options>         <dump> <pass>
+/dev/disk/by-partlabel/userdata  /  ext4  defaults,noatime  0  1
+tmpfs  /tmp   tmpfs  defaults,nodev,nosuid  0  0
+tmpfs  /run   tmpfs  defaults,nodev,nosuid  0  0
+# persist is mounted late by persist-mount.service (see mount-persist.sh)

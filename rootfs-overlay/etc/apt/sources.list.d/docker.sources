@@ -1,0 +1,7 @@
+# Docker CE from Tsinghua TUNA. HTTP on purpose: this image's CA store
+# fails HTTPS verify against many mirrors (same as ubuntu-ports).
+Types: deb
+URIs: http://mirrors.tuna.tsinghua.edu.cn/docker-ce/linux/ubuntu
+Suites: resolute
+Components: stable
+Signed-By: /etc/apt/keyrings/docker.gpg

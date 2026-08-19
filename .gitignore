@@ -1,0 +1,33 @@
+# Build outputs
+/out/
+/linux/
+
+# Kernel build tree
+*.o
+*.ko
+*.mod
+*.mod.c
+*.cmd
+.tmp_versions/
+Module.symvers
+modules.order
+
+# Editor
+*.swp
+*~
+__pycache__/
+*.pyc
+
+# Secrets — do not commit
+root-password.md
+rootfs-overlay/etc/ginkgo-root-password
+
+# Device backups (large binaries) and UART dumps
+backup/ginkgo/*.img
+backup/ginkgo/logs/
+
+# Local scratch (do not publish)
+/tmp/
+
+# Editor / agent workspace (not part of the public tree)
+.cursor/

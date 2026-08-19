@@ -1,0 +1,31 @@
+#!/bin/busybox sh
+# Early userspace: mount Ubuntu rootfs on userdata, then switch_root to systemd.
+export PATH=/bin
+
+/busybox mount -t proc proc /proc
+/busybox mount -t sysfs sysfs /sys
+/busybox mount -t devtmpfs devtmpfs /dev
+
+i=0
+while [ ! -e /dev/disk/by-partlabel/userdata ] && [ "$i" -lt 120 ]; do
+	/busybox sleep 0.25
+	i=$((i + 1))
+done
+
+if [ ! -e /dev/disk/by-partlabel/userdata ]; then
+	/busybox echo "initramfs: userdata partition not found" >/dev/kmsg
+	exec /bin/sh
+fi
+
+/busybox mkdir -p /newroot
+if ! /busybox mount -t ext4 -o rw /dev/disk/by-partlabel/userdata /newroot; then
+	/busybox echo "initramfs: ext4 mount userdata failed" >/dev/kmsg
+	exec /bin/sh
+fi
+
+/busybox mkdir -p /newroot/proc /newroot/sys /newroot/dev
+/busybox mount --move /proc /newroot/proc
+/busybox mount --move /sys /newroot/sys
+/busybox mount --move /dev /newroot/dev
+
+exec /busybox switch_root /newroot /sbin/init

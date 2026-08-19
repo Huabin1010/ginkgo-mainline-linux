@@ -1,0 +1,2 @@
+# ginkgo (SM6125): expose persist symlink early without waiting for all mmc partitions.
+KERNEL=="mmcblk0p69", SYMLINK+="disk/by-partlabel/persist"

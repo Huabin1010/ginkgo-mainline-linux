@@ -1,0 +1,4 @@
+lineage_ginkgo-userdebug 10 QQ3A.200805.001 10039366
+17.1-20220214-NIGHTLY-ginkgo
+10
+<serial>

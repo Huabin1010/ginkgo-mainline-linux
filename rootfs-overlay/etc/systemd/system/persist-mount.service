@@ -1,0 +1,13 @@
+[Unit]
+Description=Mount Android persist partition (late, non-blocking)
+After=local-fs.target systemd-udev-settle.service
+Before=network-pre.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=30
+ExecStart=/usr/local/sbin/mount-persist.sh
+
+[Install]
+WantedBy=multi-user.target

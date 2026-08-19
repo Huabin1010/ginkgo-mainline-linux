@@ -1,0 +1,16 @@
+[Unit]
+Description=USB RNDIS network gadget (host debugging)
+After=sys-kernel-config.mount systemd-modules-load.service
+Wants=network-pre.target
+Before=network.target ssh.service
+DefaultDependencies=no
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+TimeoutStartSec=60
+ExecStart=/usr/local/sbin/usb-gadget-rndis.sh start
+ExecStop=/usr/local/sbin/usb-gadget-rndis.sh stop
+
+[Install]
+WantedBy=multi-user.target sysinit.target

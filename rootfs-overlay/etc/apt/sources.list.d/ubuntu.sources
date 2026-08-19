@@ -1,0 +1,8 @@
+# Tsinghua TUNA ubuntu-ports over HTTP.
+# HTTPS fails on this image (CA verify error); security also uses TUNA
+# because ports.ubuntu.com is unreachable on this device's network.
+Types: deb
+URIs: http://mirrors.tuna.tsinghua.edu.cn/ubuntu-ports
+Suites: resolute resolute-updates resolute-backports resolute-security
+Components: main restricted universe multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg

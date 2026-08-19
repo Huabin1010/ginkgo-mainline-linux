@@ -1,0 +1,12 @@
+[Unit]
+Description=Unblank msm DRM framebuffer (fb0)
+After=local-fs.target
+Before=getty.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/display-unblank.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

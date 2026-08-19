@@ -1,0 +1,15 @@
+[Unit]
+Description=NPS client (npc)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/npc/npc.env
+ExecStart=/usr/local/bin/npc -server=${NPC_SERVER} -vkey=${NPC_VKEY} -type=${NPC_TYPE}
+Restart=always
+RestartSec=5
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target
