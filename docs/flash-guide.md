@@ -8,7 +8,7 @@ You need an **unlocked bootloader**. Flashing **userdata** erases Android and ev
 
 ## What to download
 
-A GitHub [Release](https://github.com/Huabin1010/ginkgo-mainline-linux/releases) is meant for the **kernel side**:
+A GitHub [Release](https://github.com/Huabin1010/ginkgo-mainline-linux/releases) ships the flashable images:
 
 | Asset | Flash to | Notes |
 |-------|----------|--------|

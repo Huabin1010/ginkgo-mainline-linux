@@ -81,7 +81,7 @@ The real UART is in the LLDM516 schematic:
 | **TP0012** | phone RX (GPIO17) | to module TX |
 | **GND** | ground | screw hole or a large ground pour |
 
-The pads are only **0.3–0.8 mm**; Dupont wires held by hand will not stay put. We finally soldered magnet wire:
+The pads are only **0.3–0.8 mm**; Dupont wires held by hand will not stay put. We finally soldered enameled wire:
 
 - yellow → TP0003 (phone TX)
 - green → TP0012 (phone RX)
@@ -129,10 +129,10 @@ We suspected the `soc@0` address format; after changing to 2-cell the **panic re
 Root cause: `gpio-reserved-ranges` was wrong, so the kernel touched QUP-dedicated pins:
 
 ```dts
-/* 错误 */
+/* wrong */
 gpio-reserved-ranges = <22 2>, <28 6>;
 
-/* 正确 */
+/* correct */
 gpio-reserved-ranges = <0 4>, <30 4>;
 ```
 
@@ -263,7 +263,7 @@ Fix:
 After recovery flashed the latest `boot.img`, on the PC:
 
 ```
-PING 192.168.7.2 — 0% 丢包
+PING 192.168.7.2 — 0% packet loss
 ssh root@192.168.7.2
 ```
 
@@ -330,12 +330,12 @@ The micro-USB data cable was **always plugged in**. If the PC cannot see the pho
 ### Everyday PC connection
 
 ```bash
-# 网卡出现后
+# after the USB NIC appears
 nmcli connection up ginkgo-usb
-# 或
+# or
 ./scripts/host-usb-connect.sh
 
-ssh root@192.168.7.2    # 密码见 `$GINKGO_ROOT_PASSWORD`
+ssh root@192.168.7.2    # password: `$GINKGO_ROOT_PASSWORD`
 ```
 
 ### Update userspace overlay only (when recovery can mount userdata)

@@ -8,7 +8,7 @@
 
 ## 下载什么
 
-GitHub [Release](https://github.com/Huabin1010/ginkgo-mainline-linux/releases) 只放 **内核侧** 文件：
+GitHub [Release](https://github.com/Huabin1010/ginkgo-mainline-linux/releases) 提供可刷的镜像：
 
 | 附件 | 刷到 | 说明 |
 |------|------|------|

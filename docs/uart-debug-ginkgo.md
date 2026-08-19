@@ -4,7 +4,7 @@
 
 Without a serial port you only see “return to fastboot” and cannot capture panic / earlycon.
 
-## Wiring (1.8V only)
+## Wiring (1.8 V only)
 
 See diagram: `docs/images/uart-ttl/ginkgo-usb-ttl-wiring.png`
 
@@ -15,6 +15,8 @@ See diagram: `docs/images/uart-ttl/ginkgo-usb-ttl-wiring.png`
 | Screw-hole GND | GND | **GND** |
 
 **You must use 1.8V logic levels.** Do not connect 3.3V/5V.
+
+The pads are 0.3–0.8 mm. A Dupont jumper will not stay put. Solder **0.1 mm enameled copper wire** (magnet wire) or 30 AWG hook-up wire: scrape or heat off the enamel at the tip, tin it, tack it to the pad, and join the other end to a Dupont lead into the USB-TTL module. Shopping list and photos: [full UART guide](ginkgo-usb-ttl-uart.md).
 
 ## Capturing logs on the host
 

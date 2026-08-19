@@ -99,9 +99,9 @@ Public material almost never labels `TP0003` / `TP0012` on a real board photo. H
 
 ---
 
-## 3. Taobao / Pinduoduo shopping list
+## 3. Shopping list
 
-Items below are grouped as required / strongly recommended / optional. Prices are typical 2026 ranges; confirm on the product page before ordering.
+Search Amazon, AliExpress, or eBay with the **English** keywords below. Prices are typical 2026 ranges; confirm on the listing before ordering. The [Chinese guide](zh-CN/ginkgo-usb-ttl-uart.md) has marketplace keywords for Taobao / Pinduoduo.
 
 ### 3.1 Required (core)
 
@@ -109,19 +109,19 @@ Items below are grouped as required / strongly recommended / optional. Prices ar
 
 | Item | Notes |
 |----|------|
-| **What to search** | `FT232 1.8V 3.3V 5V USB转TTL` or `FT232RL 多电平 串口模块` |
+| **What to search** | `FT232RL 1.8V USB to TTL` or `FT232 multi voltage USB serial 1.8V 3.3V 5V` |
 | **Critical spec** | Must support a **1.8V** setting (jumper or DIP switch for 1.8/3.3/5) |
 | **Chip** | Prefer **FT232RL / FT232RNL** (stable drivers, good 1.8V support) |
 | **Connector** | Type-C or Micro-USB are both fine |
-| **Price guide** | About **15–40 yuan**; industrial multi-level about **40–80 yuan** |
+| **Price guide** | About **US$3–8**; industrial multi-level about **US$8–15** |
 | **Check before order** | The product photo must show **1.8V** text or a DIP setting; do not buy 3.3V/5V-only boards |
 
 **Recommended search keywords (copy as-is):**
 
 ```
-FT232RL 1.8V 3.3V 5V USB转TTL
-FT232 多电平 USB转TTL 拨码
-USB转TTL 1.8V 高通 串口
+FT232RL 1.8V 3.3V 5V USB to TTL
+FT232 multi voltage USB serial DIP switch
+USB to TTL 1.8V Qualcomm UART
 ```
 
 **Optional brand / model directions (not exclusive):**
@@ -133,27 +133,35 @@ USB转TTL 1.8V 高通 串口
 **Do not buy (unless you add a level shifter):**
 
 ```
-CH340 USB转TTL          ← most are 3.3V/5V only
-PL2303 USB转TTL         ← often fails to read 1.8V
-CP2102 3.3V             ← default 3.3V; do not direct-wire unless VIO is changed
+CH340 USB to TTL          ← most are 3.3V/5V only
+PL2303 USB to TTL         ← often fails to read 1.8V
+CP2102 3.3V               ← default 3.3V; do not direct-wire unless VIO is changed
 Raspberry Pi 3.3V serial cable   ← no 1.8V setting
 ```
 
 #### B. Dupont / flying-lead jumper wires
 
+Colored jumper leads with snap-on plastic housings (female–female, male–female). Use them on the USB-TTL header. **Do not solder them to the test points** — the core is thicker than the pad.
+
 | Item | Notes |
 |----|------|
-| **What to search** | `杜邦线 母对母 20cm` + `杜邦线 公对母` |
-| **Use** | Module headers ↔ flying leads soldered on the phone |
-| **Price guide** | **3–8 yuan** / strip |
+| **What to search** | `Dupont jumper wire female to female 20cm` + `Dupont male to female` |
+| **Use** | Module headers ↔ enameled flying leads soldered on the phone |
+| **Price guide** | **US$1–2** / strip |
 
 #### C. Enameled wire or very fine hook-up wire (solder to test points)
 
+A thin copper wire coated in insulating enamel (also sold as magnet wire). The pads are only **0.3–0.8 mm**; a Dupont core is too thick and will not stay put by hand. Solder 0.1 mm enamel wire or 30 AWG silicone hook-up wire.
+
+**Strip the enamel before tinning:** solder will not wet the coating. Only strip **2–3 mm** at the tip: heat briefly and scrape with sandpaper or a blade, or burn the enamel off with a fluxed iron and tin immediately. Do not strip the whole run or it will short.
+
+**How it meets the Dupont lead:** solder one end to the test point; solder or twist the other end onto a Dupont pin, then plug that into the USB-TTL header.
+
 | Item | Notes |
 |----|------|
-| **What to search** | `漆包线 0.1mm` or `电子线 30AWG` / `航模线 30AWG` |
+| **What to search** | `0.1mm enameled copper wire` / `magnet wire 38 AWG` or `30 AWG silicone hook up wire` |
 | **Use** | Solder to TP0003 / TP0012 / GND (the pads are tiny) |
-| **Price guide** | **5–15 yuan** |
+| **Price guide** | **US$1–3** |
 | **Tip** | Buy **3 colors** (red/green/black) so TX/RX/GND are easy to tell apart |
 
 ---
@@ -164,10 +172,10 @@ Raspberry Pi 3.3V serial cable   ← no 1.8V setting
 
 | Item | What to search | Price guide | Notes |
 |----|--------|--------|------|
-| Temperature-controlled iron | `恒温电烙铁 60W Type-C` or `T12 烙铁` | 40–150 yuan | Hold ~300–350℃ stably |
-| Fine solder | `焊锡丝 0.5mm 含松香` or `无铅 0.6mm` | 5–15 yuan | **Fine** is easier than thick |
-| Flux | `助焊膏` / `松香助焊剂笔` | 5–12 yuan | Required on test points |
-| Desolder / solder removal | `吸锡带` or `吸锡器` | 5–15 yuan | Recovery if you solder the wrong pad |
+| Temperature-controlled iron | `60W USB-C temperature controlled soldering iron` or `T12 soldering station` | US$8–25 | Hold ~300–350℃ stably |
+| Fine solder | `0.5mm rosin core solder wire` or `0.6mm lead-free solder` | US$1–3 | **Fine** is easier than thick |
+| Flux | `solder flux paste` / `rosin flux pen` | US$1–2 | Required on test points |
+| Desolder / solder removal | `solder wick` or `desoldering pump` | US$1–3 | Recovery if you solder the wrong pad |
 
 Phone test points are fragile. **Do not brute-force them with a high-power, uncontrolled iron.**
 
@@ -175,20 +183,20 @@ Phone test points are fragile. **Do not brute-force them with a high-power, unco
 
 | Item | Notes |
 |----|------|
-| **What to search** | `数字万用表` (an entry-level meter is enough) |
+| **What to search** | `digital multimeter` (an entry-level meter is enough) |
 | **Use** | ① Confirm GND; ② Check that TX is about 1.8V; ③ Look for shorts |
-| **Price guide** | **20–60 yuan** |
+| **Price guide** | **US$4–10** |
 
 #### F. Tear-down tools
 
 | Item | What to search | Price guide |
 |----|--------|--------|
-| Pry bar / plastic picks | `手机拆机撬棒` | 5–10 yuan |
-| Suction cup | `手机屏幕吸盘` | 3–8 yuan |
-| Phillips / pentalobe bits | `手机螺丝刀套装` | 10–25 yuan |
-| Tweezers | `防静电镊子` | 5–15 yuan |
+| Pry bar / plastic picks | `phone opening pry tool` | US$1–2 |
+| Suction cup | `phone screen suction cup` | US$1 |
+| Phillips / pentalobe bits | `phone screwdriver set` | US$2–4 |
+| Tweezers | `ESD tweezers` | US$1–3 |
 
-The Redmi Note 8 back cover is glass held with adhesive. Search `红米 Note 8 拆后盖` for videos; heat (hot-air gun / hair dryer) makes it easier.
+The Redmi Note 8 back cover is glass held with adhesive. Search `Redmi Note 8 remove back cover` for videos; heat (hot-air gun / hair dryer) makes it easier.
 
 ---
 
@@ -196,11 +204,11 @@ The Redmi Note 8 back cover is glass held with adhesive. Search `红米 Note 8 �
 
 | Part | What to search | When needed | Price guide |
 |------|--------|----------|--------|
-| 1.8↔3.3 level shifter | `TXS0102 电平转换` or `TXB0104 模块` | Fallback if you already have a 3.3V USB-TTL | 5–15 yuan |
-| Hot-air gun | `迷你热风枪 拆机` | Opening the back cover / shields | 40–100 yuan |
-| Magnifier / microscope | `手机维修显微镜` / `台式放大镜` | Reading TP silkscreen | 30–200 yuan |
-| High-temp tape | `高温胶带 Kapton` | Strain-relieve flying leads | 5–10 yuan |
-| USB extension | `USB Type-C 延长线` | Easier wiring while the phone is open | 8–20 yuan |
+| 1.8↔3.3 level shifter | `TXS0102 level shifter` or `TXB0104 module` | Fallback if you already have a 3.3V USB-TTL | US$1–3 |
+| Hot-air gun | `mini hot air gun phone repair` | Opening the back cover / shields | US$8–20 |
+| Magnifier / microscope | `phone repair microscope` / `desk magnifier` | Reading TP silkscreen | US$5–30 |
+| High-temp tape | `Kapton tape` | Strain-relieve flying leads | US$1–2 |
+| USB extension | `USB Type-C extension cable` | Easier wiring while the phone is open | US$2–4 |
 
 **Fallback wiring (only when using a 3.3V module):**
 
@@ -217,15 +225,15 @@ Do not recommend beginners stealing 1.8V from a board LDO for the shifter; prefe
 
 | # | Product (search terms) | Qty | About |
 |---|---------------|------|------|
-| 1 | `FT232RL 1.8V 3.3V 5V USB转TTL` | 1 | ¥20–40 |
-| 2 | `杜邦线 母对母` | 1 strip | ¥5 |
-| 3 | `漆包线 0.1mm` or `30AWG 电子线 彩色` | 1 | ¥8 |
-| 4 | `恒温电烙铁` (skip if you already have one) | 1 | ¥50 |
-| 5 | `焊锡丝 0.5mm` + `助焊膏` | 1 each | ¥15 |
-| 6 | `数字万用表` (skip if you already have one) | 1 | ¥30 |
-| 7 | `手机拆机工具套装` | 1 | ¥15 |
+| 1 | `FT232RL 1.8V 3.3V 5V USB to TTL` | 1 | US$4–8 |
+| 2 | `Dupont jumper female to female` | 1 strip | US$1 |
+| 3 | `0.1mm enameled copper wire` or `30 AWG silicone wire assorted` | 1 | US$2 |
+| 4 | `temperature controlled soldering iron` (skip if you already have one) | 1 | US$8 |
+| 5 | `0.5mm solder wire` + `flux paste` | 1 each | US$3 |
+| 6 | `digital multimeter` (skip if you already have one) | 1 | US$5 |
+| 7 | `phone repair tool kit` | 1 | US$3 |
 
-**Total about: ¥80–160** (under ¥40 if you already have an iron / multimeter).
+**Total about: US$15–25** (under US$8 if you already have an iron / multimeter).
 
 ---
 

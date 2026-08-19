@@ -4,7 +4,7 @@
 
 无串口时只能看到「回 fastboot」，抓不到 panic / earlycon。
 
-## 接线（1.8V only）
+## 接线（只用 1.8V）
 
 参考图：`docs/images/uart-ttl/ginkgo-usb-ttl-wiring.png`
 
@@ -15,6 +15,8 @@
 | 螺丝孔 GND | GND | **GND** |
 
 **必须用 1.8V 逻辑电平**，不要接 3.3V/5V。
+
+测试点只有 0.3–0.8 mm，杜邦线手扶焊不住。用 **`漆包线 0.1mm`**（或 30AWG 航模电子线）焊到焊盘：先刮掉/烫掉端头绝缘漆再上锡；另一头接到杜邦线，再插 USB-TTL。采购和焊接细节见 [UART 详细指南](ginkgo-usb-ttl-uart.md)。
 
 ## 主机端抓 log
 
