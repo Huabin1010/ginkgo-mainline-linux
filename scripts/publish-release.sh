@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Create a GitHub Release and upload kernel-side images (not the rootfs).
+# Create a GitHub Release: boot.img, empty dtbo, optional compressed rootfs.
 #
 # Interface:
 #   GitHub Releases REST API  →  gh release create
@@ -44,28 +44,39 @@ fi
 [[ -f "$BOOT" ]] || { echo "error: missing $BOOT — run scripts/build-bootimg.sh" >&2; exit 1; }
 [[ -f "$DTBO" ]] || "$ROOT/scripts/make-empty-dtbo.sh"
 
-# Never attach the Ubuntu image: it is huge and may contain a password.
-
 WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 cp -a "$BOOT" "$WORKDIR/boot.img"
 cp -a "$DTBO" "$WORKDIR/dtbo-empty.img"
+ASSETS=( "$WORKDIR/boot.img" "$WORKDIR/dtbo-empty.img" )
+
+ROOTFS="${ROOTFS_IMG:-$OUT/rootfs.ext4}"
+if [[ -f "$ROOTFS" ]]; then
+	command -v zstd >/dev/null || { echo "error: zstd required to pack rootfs (apt install zstd)" >&2; exit 1; }
+	echo "==> Compressing $ROOTFS (GitHub rejects a raw 2 GiB file)"
+	zstd -T0 -3 -f -o "$WORKDIR/rootfs.ext4.zst" "$ROOTFS"
+	ASSETS+=( "$WORKDIR/rootfs.ext4.zst" )
+fi
+
 (
 	cd "$WORKDIR"
-	sha256sum boot.img dtbo-empty.img > SHA256SUMS
+	sha256sum -- "${ASSETS[@]##*/}" > SHA256SUMS
 )
+ASSETS+=( "$WORKDIR/SHA256SUMS" )
 
 NOTES="$WORKDIR/notes.md"
 cat > "$NOTES" <<EOF
-Kernel-side images for **Xiaomi Redmi Note 8 (ginkgo)**.
+Images for **Xiaomi Redmi Note 8 (ginkgo)**.
 
 Flash tutorial (EN): https://github.com/${REPO}/blob/main/docs/flash-guide.md
 刷机教程（中文）: https://github.com/${REPO}/blob/main/docs/zh-CN/flash-guide.md
 
-This release does **not** include \`rootfs.ext4\`. Build that locally.
+\`rootfs.ext4\` is shipped as \`rootfs.ext4.zst\` (the raw 2 GiB file is over GitHub's limit). Unpack with \`zstd -d\`, then flash userdata.
 
 \`\`\`
 fastboot getvar product    # must be ginkgo
+zstd -d rootfs.ext4.zst
+fastboot flash userdata rootfs.ext4
 fastboot flash dtbo dtbo-empty.img
 fastboot flash boot boot.img
 fastboot reboot
@@ -77,9 +88,7 @@ gh release create "$TAG" \
 	--repo "$REPO" \
 	--title "ginkgo mainline $TAG" \
 	--notes-file "$NOTES" \
-	"$WORKDIR/boot.img" \
-	"$WORKDIR/dtbo-empty.img" \
-	"$WORKDIR/SHA256SUMS"
+	"${ASSETS[@]}"
 
 echo "==> $TAG published"
 echo "    https://github.com/${REPO}/releases/tag/${TAG}"

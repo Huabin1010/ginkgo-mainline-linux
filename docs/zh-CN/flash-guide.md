@@ -14,14 +14,14 @@ GitHub [Release](https://github.com/Huabin1010/ginkgo-mainline-linux/releases) �
 |------|------|------|
 | `boot.img` | `boot` | 主线内核 + DTB + initramfs |
 | `dtbo-empty.img` | `dtbo` | 24 MiB 全零，ABL 不叠加 overlay，改用 `boot.img` 里的 DTB |
+| `rootfs.ext4.zst` | 解压后刷 `userdata` | 原始 `rootfs.ext4` 刚好 2 GiB，GitHub 拒收；先解压。**会清空 userdata。** |
 | `SHA256SUMS` | — | 刷之前先校验 |
 
-**故意不放进 Release：**
+Release 里的 rootfs 是**早期最小镜像**，不是后来的完整 GNOME 桌面。第一次开机后执行 `passwd`。也可以继续用 `scripts/build-rootfs.sh` 在本机做更新的镜像。
 
-- `rootfs.ext4`：体积大，而且会把密码打进镜像。请在本机用 `scripts/build-rootfs.sh` 做。
-- 原厂 / Lineage 的 `vbmeta.img`、`boot.img`：自己留备份，见 `backup/ginkgo/`。
+原厂 / Lineage 的 `vbmeta.img`、`boot.img` 不在 Release 里，自己留备份，见 `backup/ginkgo/`。
 
-手机里还是 Android、第一次装 Linux：先在电脑做好 Ubuntu 镜像并刷 userdata，再刷 Release 里的 `boot` + 空 `dtbo`。以后只更新内核时，**只刷 boot + dtbo**。
+第一次装：解压 rootfs，刷 userdata，再刷 `boot` + 空 `dtbo`。以后只更新内核时，**只刷 boot + dtbo**。
 
 ## 电脑工具
 
@@ -42,26 +42,27 @@ fastboot getvar product           # 必须是 ginkgo
 
 ## 首次安装（会清空 userdata）
 
-在电脑上做一次 rootfs：
-
-```bash
-git clone https://github.com/Huabin1010/ginkgo-mainline-linux.git
-cd ginkgo-mainline-linux
-./scripts/setup-deps.sh
-# 镜像要用的密码（不入库）：
-echo '你的密码' > rootfs-overlay/etc/ginkgo-root-password
-chmod 600 rootfs-overlay/etc/ginkgo-root-password
-./scripts/build-rootfs.sh
-./scripts/configure-rootfs.sh
-./scripts/build-rootfs-image.sh
-```
-
 下载 Release（示例标签 `v0.1.0`）：
 
 ```bash
 gh release download v0.1.0 --repo Huabin1010/ginkgo-mainline-linux --dir out
 # 或浏览器：https://github.com/Huabin1010/ginkgo-mainline-linux/releases
-sha256sum -c out/SHA256SUMS
+cd out && sha256sum -c SHA256SUMS
+sudo apt install zstd
+zstd -d -f rootfs.ext4.zst          # → rootfs.ext4（2 GiB）
+```
+
+也可以在电脑上自己做更新 / 完整桌面的 rootfs：
+
+```bash
+git clone https://github.com/Huabin1010/ginkgo-mainline-linux.git
+cd ginkgo-mainline-linux
+./scripts/setup-deps.sh
+echo '你的密码' > rootfs-overlay/etc/ginkgo-root-password
+chmod 600 rootfs-overlay/etc/ginkgo-root-password
+./scripts/build-rootfs.sh
+./scripts/configure-rootfs.sh
+./scripts/build-rootfs-image.sh
 ```
 
 进 fastboot（`adb reboot bootloader`，或音量− + 电源），然后：
@@ -138,4 +139,4 @@ gh auth login          # 只需一次；git 的 SSH 不能代替 API 登录
 ./scripts/publish-release.sh v0.1.0
 ```
 
-脚本会上传 `out/boot.img`、`out/dtbo-empty.img` 和 `SHA256SUMS`，并拒绝上传 `rootfs.ext4`。
+脚本会上传 `out/boot.img`、`out/dtbo-empty.img` 和 `SHA256SUMS`。若存在 `out/rootfs.ext4`，会先压成 `rootfs.ext4.zst`（GitHub 拒收刚好 2 GiB 的原文件）再上传。

@@ -14,14 +14,14 @@ A GitHub [Release](https://github.com/Huabin1010/ginkgo-mainline-linux/releases)
 |-------|----------|--------|
 | `boot.img` | `boot` | Mainline kernel + DTB + initramfs |
 | `dtbo-empty.img` | `dtbo` | 24 MiB of zeros so ABL skips overlay and uses the DTB in `boot.img` |
+| `rootfs.ext4.zst` | `userdata` after decompress | GitHub rejects a raw 2 GiB `rootfs.ext4`; unpack first. **Wipes userdata.** |
 | `SHA256SUMS` | — | Check the files before flashing |
 
-**Not in the Release (on purpose):**
+The Release rootfs is the **early minimal** image, not the later full GNOME desktop. After first boot run `passwd`. You can still build a newer image locally with `scripts/build-rootfs.sh`.
 
-- `rootfs.ext4` — several gigabytes, and it would bake in a password. Build it locally with `scripts/build-rootfs.sh`.
-- Stock `vbmeta.img` / Lineage `boot.img` — keep your own backup; see `backup/ginkgo/`.
+Stock `vbmeta.img` / Lineage `boot.img` are not in the Release — keep your own backup; see `backup/ginkgo/`.
 
-First install on a phone that still has Android: build the Ubuntu image once, flash userdata, then flash the Release `boot` + empty `dtbo`. Later kernel updates are **boot + dtbo only**.
+First install: decompress the rootfs, flash userdata, then flash `boot` + empty `dtbo`. Later kernel updates are **boot + dtbo only**.
 
 ## Host tools
 
@@ -42,26 +42,27 @@ If `product` is not `ginkgo`, stop.
 
 ## First install (wipes userdata)
 
-Build the rootfs on the PC (once):
-
-```bash
-git clone https://github.com/Huabin1010/ginkgo-mainline-linux.git
-cd ginkgo-mainline-linux
-./scripts/setup-deps.sh
-# set a password the image will use (not committed):
-echo 'your-password' > rootfs-overlay/etc/ginkgo-root-password
-chmod 600 rootfs-overlay/etc/ginkgo-root-password
-./scripts/build-rootfs.sh
-./scripts/configure-rootfs.sh
-./scripts/build-rootfs-image.sh
-```
-
 Download the Release assets (example tag `v0.1.0`):
 
 ```bash
 gh release download v0.1.0 --repo Huabin1010/ginkgo-mainline-linux --dir out
 # or the browser: https://github.com/Huabin1010/ginkgo-mainline-linux/releases
-sha256sum -c out/SHA256SUMS
+cd out && sha256sum -c SHA256SUMS
+sudo apt install zstd
+zstd -d -f rootfs.ext4.zst          # → rootfs.ext4 (2 GiB)
+```
+
+Or build the rootfs on the PC yourself (newer / full desktop):
+
+```bash
+git clone https://github.com/Huabin1010/ginkgo-mainline-linux.git
+cd ginkgo-mainline-linux
+./scripts/setup-deps.sh
+echo 'your-password' > rootfs-overlay/etc/ginkgo-root-password
+chmod 600 rootfs-overlay/etc/ginkgo-root-password
+./scripts/build-rootfs.sh
+./scripts/configure-rootfs.sh
+./scripts/build-rootfs-image.sh
 ```
 
 Enter fastboot (`adb reboot bootloader`, or Vol− + Power). Then:
@@ -138,4 +139,4 @@ gh auth login          # once; git SSH is not enough for the API
 ./scripts/publish-release.sh v0.1.0
 ```
 
-The script uploads `out/boot.img`, `out/dtbo-empty.img`, and `SHA256SUMS`. It refuses to upload `rootfs.ext4`.
+The script uploads `out/boot.img`, `out/dtbo-empty.img`, and `SHA256SUMS`. If `out/rootfs.ext4` exists, it compresses it to `rootfs.ext4.zst` (GitHub rejects a raw 2 GiB file) and uploads that too.
