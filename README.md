@@ -17,6 +17,8 @@ This tree builds Linux 7.0 + an Ubuntu 26.04 arm64 rootfs, then flashes them ont
 | P6 | Ubuntu GNOME + Adreno 610 | Done |
 | P7 | Docker Engine | Done |
 
+**Flash a Release image:** [English](docs/flash-guide.md) · [中文](docs/zh-CN/flash-guide.md)
+
 Hardware notes, UART wiring, and the full bring-up story live under [`docs/`](docs/README.md). Chinese originals are in [`docs/zh-CN/`](docs/zh-CN/README.md).
 
 ## Quick start
@@ -91,6 +93,7 @@ host/             Host NetworkManager snippet for USB RNDIS
 
 | Topic | English | 中文 |
 |-------|---------|------|
+| Flash a Release | [flash guide](docs/flash-guide.md) | [刷机教程](docs/zh-CN/flash-guide.md) |
 | Doc index | [docs/README.md](docs/README.md) | [docs/zh-CN/README.md](docs/zh-CN/README.md) |
 | Full chronicle | [bring-up chronicle](docs/ginkgo-mainline-bringup-chronicle.md) | [中文](docs/zh-CN/ginkgo-mainline-bringup-chronicle.md) |
 | Porting handbook | [porting guide](docs/mainline-ginkgo-porting-guide.md) | [中文](docs/zh-CN/mainline-ginkgo-porting-guide.md) |

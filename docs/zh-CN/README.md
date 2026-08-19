@@ -8,6 +8,7 @@
 
 | 文档 | 内容 |
 |------|------|
+| [flash-guide.md](flash-guide.md) | 刷 GitHub Release（`boot.img` + 空 dtbo） |
 | [ginkgo-mainline-bringup-chronicle.md](ginkgo-mainline-bringup-chronicle.md) | 全机 bring-up 时间线与当前状态 |
 | [mainline-ginkgo-porting-guide.md](mainline-ginkgo-porting-guide.md) | 硬件清单、与主线差距、分阶段计划 |
 | [ginkgo-usb-ttl-uart.md](ginkgo-usb-ttl-uart.md) | 1.8V UART 接线（不要焊 EDL 点） |

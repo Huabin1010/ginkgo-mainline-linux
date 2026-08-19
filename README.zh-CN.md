@@ -17,6 +17,8 @@
 | P6 | Ubuntu GNOME + Adreno 610 | 已完成 |
 | P7 | Docker Engine | 已完成 |
 
+**刷 Release 镜像：** [中文教程](docs/zh-CN/flash-guide.md) · [English](docs/flash-guide.md)
+
 硬件说明、UART 接线和完整 bring-up 记录在 [`docs/zh-CN/`](docs/zh-CN/README.md)。英文默认文档在 [`docs/`](docs/README.md)。
 
 ## 快速开始
@@ -91,6 +93,7 @@ host/             主机 NetworkManager USB RNDIS 配置
 
 | 主题 | 中文 | English |
 |------|------|---------|
+| 刷 Release | [刷机教程](docs/zh-CN/flash-guide.md) | [flash guide](docs/flash-guide.md) |
 | 文档目录 | [docs/zh-CN/README.md](docs/zh-CN/README.md) | [docs/README.md](docs/README.md) |
 | 全记录 | [bring-up 编年](docs/zh-CN/ginkgo-mainline-bringup-chronicle.md) | [EN](docs/ginkgo-mainline-bringup-chronicle.md) |
 | 技术手册 | [移植手册](docs/zh-CN/mainline-ginkgo-porting-guide.md) | [EN](docs/mainline-ginkgo-porting-guide.md) |

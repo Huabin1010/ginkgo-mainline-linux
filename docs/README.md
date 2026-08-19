@@ -8,6 +8,7 @@ English is the default. Chinese originals live in [`zh-CN/`](zh-CN/README.md). E
 
 | Doc | What it is |
 |-----|------------|
+| [flash-guide.md](flash-guide.md) | Flash a GitHub Release (`boot.img` + empty dtbo) |
 | [ginkgo-mainline-bringup-chronicle.md](ginkgo-mainline-bringup-chronicle.md) | Full bring-up timeline and current status |
 | [mainline-ginkgo-porting-guide.md](mainline-ginkgo-porting-guide.md) | Hardware map, gaps vs mainline, staged plan |
 | [ginkgo-usb-ttl-uart.md](ginkgo-usb-ttl-uart.md) | 1.8 V UART wiring (do not use the EDL pads) |
