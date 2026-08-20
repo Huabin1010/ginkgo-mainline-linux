@@ -4,7 +4,7 @@
 
 Mainline Linux bring-up for **Xiaomi Redmi Note 8** (codename **ginkgo**, Qualcomm **SM6125**).
 
-This tree builds Linux 7.0 + an Ubuntu 26.04 arm64 rootfs, then flashes them onto the phone. Display, touch, Wi-Fi, GNOME, Adreno 610, and Docker are already working on device.
+This tree builds Linux 7.0 + an Ubuntu 26.04 arm64 rootfs, then flashes them onto the phone. Display, touch, Wi-Fi, GNOME, Adreno 610, and Docker are already working on **Tianma NT36672A** units.
 
 | Stage | Goal | Status |
 |-------|------|--------|
@@ -20,6 +20,40 @@ This tree builds Linux 7.0 + an Ubuntu 26.04 arm64 rootfs, then flashes them ont
 **Flash a Release image:** [English](docs/flash-guide.md) · [中文](docs/zh-CN/flash-guide.md)
 
 Hardware notes, UART wiring, and the full bring-up story live under [`docs/`](docs/README.md). Chinese originals are in [`docs/zh-CN/`](docs/zh-CN/README.md).
+
+## Panel SKUs (Tianma vs Huaxing)
+
+ginkgo shipped with more than one display. The default `boot.img` is brought up on **Tianma NT36672A** (1080×2340). A **Huaxing / CSOT FT8719** phone will likely stay black on that image — same DSI connector, different panel IC and init sequence.
+
+GitHub [Releases](https://github.com/Huabin1010/ginkgo-mainline-linux/releases) also ship an experimental **`boot-huaxing.img`**. Touch is off in that build. It is a first test, not a supported desktop image.
+
+On stock Android you can see which panel you have:
+
+```bash
+dmesg | grep -iE 'tianma|huaxing|ft8719|nt36672a|TP info'
+```
+
+If Huaxing does not light up, open a [GitHub issue](https://github.com/Huabin1010/ginkgo-mainline-linux/issues/new) and attach the **boot log** (from power-on through DRM/panel probe). That is enough; no need for photos of the whole session.
+
+**UART (best if the screen is black).** 1.8 V only. Phone TX **TP0003** → adapter RX, phone RX **TP0012** → adapter TX, plus GND. Start capture **before** power-on. Wiring: [UART guide](docs/ginkgo-usb-ttl-uart.md).
+
+```bash
+picocom -b 115200 /dev/ttyUSB0 | tee uart.log
+```
+
+**USB SSH (if the kernel reaches userspace).** USB RNDIS, then `root@192.168.7.2`. The root password is not in this repo.
+
+```bash
+ssh root@192.168.7.2 'dmesg' > dmesg.txt
+```
+
+Paste or attach `uart.log` / `dmesg.txt`. These lines matter most:
+
+```text
+panel init complete
+power mode readback
+dsi_err
+```
 
 ## Quick start
 

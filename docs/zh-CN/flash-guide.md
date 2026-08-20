@@ -12,10 +12,13 @@ GitHub [Release](https://github.com/Huabin1010/ginkgo-mainline-linux/releases) �
 
 | 附件 | 刷到 | 说明 |
 |------|------|------|
-| `boot.img` | `boot` | 主线内核 + DTB + initramfs |
+| `boot.img` | `boot` | 主线内核 + DTB + initramfs（**天马 NT36672A**） |
+| `boot-huaxing.img` | `boot`（测试） | 实验性 **华星 FT8719** 面板。可能黑屏，触控关闭。建议先 `fastboot boot` 试一次再 flash |
 | `dtbo-empty.img` | `dtbo` | 24 MiB 全零，ABL 不叠加 overlay，改用 `boot.img` 里的 DTB |
 | `rootfs.ext4.zst` | 解压后刷 `userdata` | 原始 `rootfs.ext4` 刚好 2 GiB，GitHub 拒收；先解压。**会清空 userdata。** |
 | `SHA256SUMS` | — | 刷之前先校验 |
+
+默认镜像只适配天马。华星测试见主 README 的 [面板批次](../../README.zh-CN.md#面板批次天马--华星)（如何区分、串口/USB 日志、提 Issue）。
 
 Release 里的 rootfs 是**早期最小镜像**，不是后来的完整 GNOME 桌面。第一次开机后执行 `passwd`。也可以继续用 `scripts/build-rootfs.sh` 在本机做更新的镜像。
 
@@ -139,4 +142,4 @@ gh auth login          # 只需一次；git 的 SSH 不能代替 API 登录
 ./scripts/publish-release.sh v0.1.0
 ```
 
-脚本会上传 `out/boot.img`、`out/dtbo-empty.img` 和 `SHA256SUMS`。若存在 `out/rootfs.ext4`，会先压成 `rootfs.ext4.zst`（GitHub 拒收刚好 2 GiB 的原文件）再上传。
+脚本会上传 `out/boot.img`、`out/dtbo-empty.img` 和 `SHA256SUMS`。若存在 `out/boot-huaxing.img` 也会一并上传。若存在 `out/rootfs.ext4`，会先压成 `rootfs.ext4.zst`（GitHub 拒收刚好 2 GiB 的原文件）再上传。

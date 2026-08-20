@@ -8,6 +8,7 @@
 # Usage:
 #   gh auth login                          # once
 #   ./scripts/build-bootimg.sh             # produces out/boot.img
+#   ./scripts/build-bootimg-huaxing.sh     # optional: out/boot-huaxing.img
 #   ./scripts/make-empty-dtbo.sh           # produces out/dtbo-empty.img
 #   ./scripts/publish-release.sh v0.1.0
 set -euo pipefail
@@ -50,6 +51,12 @@ cp -a "$BOOT" "$WORKDIR/boot.img"
 cp -a "$DTBO" "$WORKDIR/dtbo-empty.img"
 ASSETS=( "$WORKDIR/boot.img" "$WORKDIR/dtbo-empty.img" )
 
+HUAXING="${BOOT_HUAXING:-$OUT/boot-huaxing.img}"
+if [[ -f "$HUAXING" ]]; then
+	cp -a "$HUAXING" "$WORKDIR/boot-huaxing.img"
+	ASSETS+=( "$WORKDIR/boot-huaxing.img" )
+fi
+
 ROOTFS="${ROOTFS_IMG:-$OUT/rootfs.ext4}"
 if [[ -f "$ROOTFS" ]]; then
 	command -v zstd >/dev/null || { echo "error: zstd required to pack rootfs (apt install zstd)" >&2; exit 1; }
@@ -67,6 +74,8 @@ ASSETS+=( "$WORKDIR/SHA256SUMS" )
 NOTES="$WORKDIR/notes.md"
 cat > "$NOTES" <<EOF
 Images for **Xiaomi Redmi Note 8 (ginkgo)**.
+
+\`boot.img\` is the Tianma NT36672A build. \`boot-huaxing.img\` (if attached) is an experimental Huaxing FT8719 test kernel — display may stay black; file an issue with UART or \`dmesg\`.
 
 Flash tutorial (EN): https://github.com/${REPO}/blob/main/docs/flash-guide.md
 刷机教程（中文）: https://github.com/${REPO}/blob/main/docs/zh-CN/flash-guide.md

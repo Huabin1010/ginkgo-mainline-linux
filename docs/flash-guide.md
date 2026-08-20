@@ -12,10 +12,13 @@ A GitHub [Release](https://github.com/Huabin1010/ginkgo-mainline-linux/releases)
 
 | Asset | Flash to | Notes |
 |-------|----------|--------|
-| `boot.img` | `boot` | Mainline kernel + DTB + initramfs |
+| `boot.img` | `boot` | Mainline kernel + DTB + initramfs (**Tianma NT36672A**) |
+| `boot-huaxing.img` | `boot` (test) | Experimental **Huaxing FT8719** panel. Display may stay black; touch is off. Prefer `fastboot boot` once before flashing |
 | `dtbo-empty.img` | `dtbo` | 24 MiB of zeros so ABL skips overlay and uses the DTB in `boot.img` |
 | `rootfs.ext4.zst` | `userdata` after decompress | GitHub rejects a raw 2 GiB `rootfs.ext4`; unpack first. **Wipes userdata.** |
 | `SHA256SUMS` | — | Check the files before flashing |
+
+The default image is Tianma-only. Huaxing testers: see [Panel SKUs](../README.md#panel-skus-tianma-vs-huaxing) in the README (how to tell the panels apart, UART / USB logs, GitHub issues).
 
 The Release rootfs is the **early minimal** image, not the later full GNOME desktop. After first boot run `passwd`. You can still build a newer image locally with `scripts/build-rootfs.sh`.
 
@@ -139,4 +142,4 @@ gh auth login          # once; git SSH is not enough for the API
 ./scripts/publish-release.sh v0.1.0
 ```
 
-The script uploads `out/boot.img`, `out/dtbo-empty.img`, and `SHA256SUMS`. If `out/rootfs.ext4` exists, it compresses it to `rootfs.ext4.zst` (GitHub rejects a raw 2 GiB file) and uploads that too.
+The script uploads `out/boot.img`, `out/dtbo-empty.img`, and `SHA256SUMS`. If `out/boot-huaxing.img` exists, that is uploaded too. If `out/rootfs.ext4` exists, it compresses it to `rootfs.ext4.zst` (GitHub rejects a raw 2 GiB file) and uploads that too.
