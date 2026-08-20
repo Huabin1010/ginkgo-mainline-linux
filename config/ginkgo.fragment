@@ -52,6 +52,7 @@ CONFIG_QCOM_PBS=y
 # CONFIG_LEDS_QCOM_LPG_MODULE is not set
 CONFIG_LEDS_QCOM_LPG=y
 CONFIG_DRM_PANEL_NOVATEK_NT36672A=y
+CONFIG_DRM_PANEL_HUAXING_FT8719=y
 CONFIG_DRM_MIPI_DSI=y
 
 # Framebuffer console (mirror serial boot log on screen via DRM fbdev).

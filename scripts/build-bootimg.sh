@@ -27,10 +27,10 @@ OS_PATCH_LEVEL=2022-01
 # Old "no tty0" comment was from simplefb vs async SDHCI; eMMC now probes
 # at ~2.5s (before DRM) and the SD slot (sdhc_2) is disabled.
 if [[ "${DEBUG_BOOT:-}" == "1" ]]; then
-	BOOTIMG="$OUT/boot-debug.img"
+	BOOTIMG="${BOOTIMG:-$OUT/boot-debug.img}"
 	CMDLINE="${CMDLINE:-console=ttyMSM0,115200n8 console=tty0 earlycon=qcom_geni,0x4a90000 keep_bootcon ignore_loglevel loglevel=8 clk_ignore_unused fw_devlink.sync_state=disabled printk.devkmsg=on printk.time=1 initcall_debug debug androidboot.hardware=qcom root=/dev/disk/by-partlabel/userdata rootwait rw init=/init}"
 else
-	BOOTIMG="$OUT/boot.img"
+	BOOTIMG="${BOOTIMG:-$OUT/boot.img}"
 	CMDLINE="${CMDLINE:-console=ttyMSM0,115200n8 console=tty0 earlycon=qcom_geni,0x4a90000 keep_bootcon ignore_loglevel loglevel=8 clk_ignore_unused fw_devlink.sync_state=disabled androidboot.hardware=qcom root=/dev/disk/by-partlabel/userdata rootwait rw init=/init}"
 fi
 

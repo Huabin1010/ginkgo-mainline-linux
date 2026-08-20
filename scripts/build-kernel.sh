@@ -51,6 +51,10 @@ fi
 
 cp -f "$KBUILD_OUTPUT/arch/arm64/boot/Image.gz" "$OUT/Image.gz"
 cp -f "$KBUILD_OUTPUT/arch/arm64/boot/dts/qcom/$DTB_NAME" "$OUT/$DTB_NAME"
+if [[ -f "$KBUILD_OUTPUT/arch/arm64/boot/dts/qcom/sm6125-xiaomi-ginkgo-huaxing.dtb" ]]; then
+	cp -f "$KBUILD_OUTPUT/arch/arm64/boot/dts/qcom/sm6125-xiaomi-ginkgo-huaxing.dtb" \
+		"$OUT/sm6125-xiaomi-ginkgo-huaxing.dtb"
+fi
 
 echo "==> Done"
 ls -lh "$OUT/Image.gz" "$OUT/$DTB_NAME"

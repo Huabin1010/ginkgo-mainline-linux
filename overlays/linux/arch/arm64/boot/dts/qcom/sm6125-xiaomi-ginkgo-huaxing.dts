@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: BSD-3-Clause
+/*
+ * Xiaomi Redmi Note 8 (ginkgo) — Huaxing FT8719 panel SKU.
+ * Shares the Tianma board DTS; only the DSI panel compatible changes.
+ * Novatek SPI touch is disabled (this SKU is Focaltech FT8719).
+ */
+
+#include "sm6125-xiaomi-ginkgo.dts"
+
+/ {
+	model = "Xiaomi Redmi Note 8 (Huaxing FT8719)";
+	compatible = "xiaomi,ginkgo-huaxing", "xiaomi,ginkgo", "qcom,sm6125";
+};
+
+&ginkgo_panel {
+	compatible = "huaxing,ginkgo-ft8719";
+};
+
+&spi2 {
+	touchscreen@0 {
+		status = "disabled";
+	};
+};
