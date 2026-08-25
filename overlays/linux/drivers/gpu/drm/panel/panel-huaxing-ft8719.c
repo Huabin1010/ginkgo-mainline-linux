@@ -5,6 +5,10 @@
  * Init sequence and timings from downstream
  * dsi-panel-ft8719-huaxing-fhd-video.dtsi. DCS is sent in enable() after
  * the MSM DSI host is up — same split as the ginkgo Tianma NT36672A driver.
+ *
+ * FT8719 vendor init uses DCS long writes (downstream packet type 0x39) even
+ * for 2-byte payloads; mipi_dsi_dcs_write_buffer() picks short writes for
+ * len<=2 and the panel NAKs with -ETIMEDOUT.
  */
 
 #include <linux/delay.h>
@@ -31,9 +35,15 @@ static const unsigned long regulator_enable_loads[] = {
 	100000,
 };
 
+enum ft8719_pkt_type {
+	FT8719_PKT_DCS_LONG,
+	FT8719_PKT_DCS_SHORT,
+};
+
 struct ft8719_cmd {
 	u8 len;
 	u8 wait_ms;
+	enum ft8719_pkt_type type;
 	u8 data[16];
 };
 
@@ -49,38 +59,35 @@ static inline struct huaxing_ft8719 *to_huaxing_ft8719(struct drm_panel *panel)
 	return container_of(panel, struct huaxing_ft8719, panel);
 }
 
-/* Manufacturer / gamma pages, before sleep-out. */
-static const struct ft8719_cmd on_cmds_1[] = {
-	{ .len = 2,  .data = { 0x00, 0x00 } },
-	{ .len = 4,  .data = { 0xff, 0x87, 0x19, 0x01 } },
-	{ .len = 2,  .data = { 0x00, 0x80 } },
-	{ .len = 3,  .data = { 0xff, 0x87, 0x19 } },
-	{ .len = 2,  .data = { 0x00, 0x80 } },
-	{ .len = 13, .data = { 0xca, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
-			       0x80, 0x80, 0x80, 0x80, 0x80 } },
-	{ .len = 2,  .data = { 0x00, 0x90 } },
-	{ .len = 10, .data = { 0xca, 0xfe, 0xff, 0x66, 0xf6, 0xff, 0x66, 0xfb,
-			       0xff, 0x32 } },
-	{ .len = 2,  .data = { 0x00, 0xb5 } },
-	{ .len = 2,  .data = { 0xca, 0x06 } },
-	{ .len = 2,  .data = { 0x00, 0xb2 } },
-	{ .len = 2,  .data = { 0xca, 0x0c } },
-};
+static int huaxing_ft8719_send_cmd(struct mipi_dsi_device *dsi,
+				   const struct ft8719_cmd *cmd)
+{
+	const struct mipi_dsi_host_ops *ops = dsi->host->ops;
+	struct mipi_dsi_msg msg = {
+		.channel = dsi->channel,
+		.tx_buf = cmd->data,
+		.tx_len = cmd->len,
+	};
 
-/* DCS brightness after display-on. Downstream 0x51=0xB8, 0x53=0x24, CABC off. */
-static const struct ft8719_cmd on_cmds_2[] = {
-	{ .len = 2, .data = { MIPI_DCS_SET_DISPLAY_BRIGHTNESS, 0xb8 } },
-	{ .len = 2, .data = { MIPI_DCS_WRITE_CONTROL_DISPLAY, 0x24 } },
-	{ .len = 2, .data = { MIPI_DCS_WRITE_POWER_SAVE, 0x00 } },
-};
+	if (!ops || !ops->transfer)
+		return -ENOSYS;
 
-static const struct ft8719_cmd off_cmds[] = {
-	{ .len = 2, .wait_ms = 20,  .data = { MIPI_DCS_WRITE_CONTROL_DISPLAY, 0x24 } },
-	{ .len = 2, .wait_ms = 20,  .data = { MIPI_DCS_SET_DISPLAY_OFF, 0x00 } },
-	{ .len = 2, .wait_ms = 120, .data = { MIPI_DCS_ENTER_SLEEP_MODE, 0x00 } },
-	{ .len = 2, .data = { 0x00, 0x00 } },
-	{ .len = 5, .data = { 0xf7, 0x5a, 0xa5, 0x95, 0x27 } },
-};
+	switch (cmd->type) {
+	case FT8719_PKT_DCS_LONG:
+		msg.type = MIPI_DSI_DCS_LONG_WRITE;
+		break;
+	case FT8719_PKT_DCS_SHORT:
+		msg.type = MIPI_DSI_DCS_SHORT_WRITE_PARAM;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (dsi->mode_flags & MIPI_DSI_MODE_LPM)
+		msg.flags |= MIPI_DSI_MSG_USE_LPM;
+
+	return ops->transfer(dsi->host, &msg);
+}
 
 static int huaxing_ft8719_send_cmds(struct huaxing_ft8719 *ctx,
 				    const struct ft8719_cmd *cmds, unsigned int n)
@@ -89,15 +96,74 @@ static int huaxing_ft8719_send_cmds(struct huaxing_ft8719 *ctx,
 	int err;
 
 	for (i = 0; i < n; i++) {
-		err = mipi_dsi_dcs_write_buffer(ctx->dsi, cmds[i].data, cmds[i].len);
-		if (err < 0)
+		err = huaxing_ft8719_send_cmd(ctx->dsi, &cmds[i]);
+		if (err < 0) {
+			dev_err(&ctx->dsi->dev,
+				"DCS init cmd %u type=%u data0=%#x len=%u failed: %d\n",
+				i, cmds[i].type, cmds[i].data[0], cmds[i].len, err);
 			return err;
+		}
 		if (cmds[i].wait_ms)
 			msleep(cmds[i].wait_ms);
 	}
 
 	return 0;
 }
+
+/*
+ * Downstream qcom,mdss-dsi-on-command — packet types 0x39 / 0x15 preserved.
+ */
+static const struct ft8719_cmd on_cmds[] = {
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 2,
+	  .data = { 0x00, 0x00 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 4,
+	  .data = { 0xff, 0x87, 0x19, 0x01 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 2,
+	  .data = { 0x00, 0x80 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 3,
+	  .data = { 0xff, 0x87, 0x19 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 2,
+	  .data = { 0x00, 0x80 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 13,
+	  .data = { 0xca, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80,
+		    0x80, 0x80, 0x80, 0x80, 0x80 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 2,
+	  .data = { 0x00, 0x90 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 10,
+	  .data = { 0xca, 0xfe, 0xff, 0x66, 0xf6, 0xff, 0x66, 0xfb,
+		    0xff, 0x32 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 2,
+	  .data = { 0x00, 0xb5 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 2,
+	  .data = { 0xca, 0x06 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 2,
+	  .data = { 0x00, 0xb2 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 2,
+	  .data = { 0xca, 0x0c } },
+	{ .type = FT8719_PKT_DCS_SHORT, .len = 2, .wait_ms = 120,
+	  .data = { MIPI_DCS_EXIT_SLEEP_MODE, 0x00 } },
+	{ .type = FT8719_PKT_DCS_SHORT, .len = 2, .wait_ms = 20,
+	  .data = { MIPI_DCS_SET_DISPLAY_ON, 0x00 } },
+	{ .type = FT8719_PKT_DCS_SHORT, .len = 2,
+	  .data = { MIPI_DCS_SET_DISPLAY_BRIGHTNESS, 0xb8 } },
+	{ .type = FT8719_PKT_DCS_SHORT, .len = 2,
+	  .data = { MIPI_DCS_WRITE_CONTROL_DISPLAY, 0x24 } },
+	{ .type = FT8719_PKT_DCS_SHORT, .len = 2,
+	  .data = { MIPI_DCS_WRITE_POWER_SAVE, 0x00 } },
+};
+
+static const struct ft8719_cmd off_cmds[] = {
+	{ .type = FT8719_PKT_DCS_SHORT, .len = 2,
+	  .data = { MIPI_DCS_WRITE_CONTROL_DISPLAY, 0x24 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 2, .wait_ms = 20,
+	  .data = { MIPI_DCS_SET_DISPLAY_OFF, 0x00 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 2, .wait_ms = 120,
+	  .data = { MIPI_DCS_ENTER_SLEEP_MODE, 0x00 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 2,
+	  .data = { 0x00, 0x00 } },
+	{ .type = FT8719_PKT_DCS_LONG,  .len = 5,
+	  .data = { 0xf7, 0x5a, 0xa5, 0x95, 0x27 } },
+};
 
 static int huaxing_ft8719_prepare(struct drm_panel *panel)
 {
@@ -127,29 +193,9 @@ static int huaxing_ft8719_enable(struct drm_panel *panel)
 	u8 power_mode = 0;
 	int err;
 
-	err = huaxing_ft8719_send_cmds(ctx, on_cmds_1, ARRAY_SIZE(on_cmds_1));
+	err = huaxing_ft8719_send_cmds(ctx, on_cmds, ARRAY_SIZE(on_cmds));
 	if (err < 0) {
 		dev_err(panel->dev, "failed to send DCS init: %d\n", err);
-		return err;
-	}
-
-	err = mipi_dsi_dcs_exit_sleep_mode(ctx->dsi);
-	if (err < 0) {
-		dev_err(panel->dev, "exit sleep failed: %d\n", err);
-		return err;
-	}
-	msleep(120);
-
-	err = mipi_dsi_dcs_set_display_on(ctx->dsi);
-	if (err < 0) {
-		dev_err(panel->dev, "display on failed: %d\n", err);
-		return err;
-	}
-	msleep(20);
-
-	err = huaxing_ft8719_send_cmds(ctx, on_cmds_2, ARRAY_SIZE(on_cmds_2));
-	if (err < 0) {
-		dev_err(panel->dev, "failed to send brightness DCS: %d\n", err);
 		return err;
 	}
 
@@ -192,11 +238,16 @@ static int huaxing_ft8719_unprepare(struct drm_panel *panel)
 }
 
 /*
- * Downstream: HFP=72 HSW=4 HBP=80, VFP=112 VSW=4 VBP=12, 1080x2340@60.
- * VFP is much larger than Tianma (10); leave DPU prefetch off anyway.
+ * Downstream porches: HFP=72 HSW=4 HBP=80, VFP=112 VSW=4 VBP=12, 1080x2340@60.
+ *
+ * Native math is 1236*2468*60/1000 = 183026 kHz (byte 137269500). That rate is
+ * not in the SM6125 DSI OPP table and the 14nm pixel RCG never latches
+ * (disp_cc_mdss_pclk0 rcg didn't update → DCS DMA -ETIMEDOUT). Use the same
+ * 183012 kHz / 137259000 byte clock as the working Tianma SKU; refresh becomes
+ * 59.996 Hz.
  */
 static const struct drm_display_mode huaxing_ft8719_mode = {
-	.clock = (1080 + 72 + 4 + 80) * (2340 + 112 + 4 + 12) * 60 / 1000,
+	.clock = 183012,
 	.hdisplay = 1080,
 	.hsync_start = 1080 + 72,
 	.hsync_end = 1080 + 72 + 4,
