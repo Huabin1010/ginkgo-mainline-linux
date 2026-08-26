@@ -4,7 +4,7 @@
 
 小米 **Redmi Note 8**（代号 **ginkgo**，高通 **SM6125**）的主线 Linux 适配仓库。
 
-本仓库编译 Linux 7.0 + Ubuntu 26.04 arm64 rootfs，并刷到手机上。显示、触控、Wi-Fi、GNOME、Adreno 610、Docker 均已在 **Tianma NT36672A** 真机打通。
+本仓库编译 Linux 7.0 + Ubuntu 26.04 arm64 rootfs，并刷到手机上。**天马 NT36672A** 真机上，显示、触控、Wi-Fi、GNOME、Adreno 610、Docker 均已打通。默认 `boot.img` 就是这份天马包：DSI 为 `power mode 0x9c` / `LANE_STATUS 0x1f00`，fbcon 会把内核日志打到屏上；Type-C 默认仍是 USB gadget（RNDIS/SSH），要用键鼠再切 host。
 
 | 阶段 | 目标 | 状态 |
 |------|------|------|
@@ -23,9 +23,22 @@
 
 ## 面板批次（天马 / 华星）
 
-ginkgo 出厂有不止一种屏。默认 `boot.img` 是按 **天马 NT36672A**（1080×2340）适配的。**华星 / CSOT FT8719** 机刷这份包多半黑屏：DSI 接口相同，面板 IC 和 init 序列不同。
+ginkgo 出厂有不止一种屏。DSI 接口相同，面板 IC 和 init 序列不同。
 
-GitHub [Release](https://github.com/Huabin1010/ginkgo-mainline-linux/releases) 另提供实验性的 **`boot-huaxing.img`**，给华星机试显示。这版触控是关的，只是第一轮测试包，不是已支持的桌面镜像。
+| 镜像 | 面板 | 状态 |
+|------|------|------|
+| `boot.img`（默认） | **天马 NT36672A** 1080×2340 | 已支持。显示、fbcon、SPI 触控、GNOME 桌面。 |
+| `boot-huaxing.img` | **华星 / CSOT FT8719** | 已能出图（pclk 锁定为天马已验证的 183012 kHz）。触控仍关闭。不是已支持的桌面镜像。 |
+
+华星机刷天马 `boot.img` 会黑屏，请改刷 `boot-huaxing.img`（建议先 `fastboot boot` 试一次再写分区）。
+
+Type-C 默认是 USB gadget，保证 SSH/RNDIS。键鼠需要 OTG 转接，在手机上执行：
+
+```bash
+ginkgo-usb-host.sh
+```
+
+SSH 会立刻断开，重启（或把 role 改回 `device` 并重启 `usb-gadget-rndis`）后才能再连。
 
 原版安卓上可以确认自己是哪块屏：
 
@@ -33,7 +46,7 @@ GitHub [Release](https://github.com/Huabin1010/ginkgo-mainline-linux/releases) �
 dmesg | grep -iE 'tianma|huaxing|ft8719|nt36672a|TP info'
 ```
 
-华星若不能正常显示，请开 [GitHub Issue](https://github.com/Huabin1010/ginkgo-mainline-linux/issues/new)，附上 **启动日志**（从开机到 DRM/面板 probe）。有这份就够，不必整段聊天截图。
+若不能正常显示，请开 [GitHub Issue](https://github.com/Huabin1010/ginkgo-mainline-linux/issues/new)，附上 **启动日志**（从开机到 DRM/面板 probe）。有这份就够，不必整段聊天截图。
 
 **串口（黑屏时最有用）。** 只用 1.8V。手机 TX **TP0003** → 转接板 RX，手机 RX **TP0012** → 转接板 TX，再接 GND。先开抓 log 再开机。接线见 [UART 指南](docs/zh-CN/ginkgo-usb-ttl-uart.md)。
 

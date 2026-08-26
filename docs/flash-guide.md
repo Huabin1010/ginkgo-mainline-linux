@@ -12,13 +12,13 @@ A GitHub [Release](https://github.com/Huabin1010/ginkgo-mainline-linux/releases)
 
 | Asset | Flash to | Notes |
 |-------|----------|--------|
-| `boot.img` | `boot` | Mainline kernel + DTB + initramfs (**Tianma NT36672A**) |
-| `boot-huaxing.img` | `boot` (test) | Experimental **Huaxing FT8719** panel. Display may stay black; touch is off. Prefer `fastboot boot` once before flashing |
+| `boot.img` | `boot` | Mainline kernel + DTB + initramfs (**Tianma NT36672A**, supported) |
+| `boot-huaxing.img` | `boot` (test) | **Huaxing FT8719** panel. Display works on tester units; touch is off. Prefer `fastboot boot` once before flashing |
 | `dtbo-empty.img` | `dtbo` | 24 MiB of zeros so ABL skips overlay and uses the DTB in `boot.img` |
 | `rootfs.ext4.zst` | `userdata` after decompress | GitHub rejects a raw 2 GiB `rootfs.ext4`; unpack first. **Wipes userdata.** |
 | `SHA256SUMS` | — | Check the files before flashing |
 
-The default image is Tianma-only. Huaxing testers: see [Panel SKUs](../README.md#panel-skus-tianma-vs-huaxing) in the README (how to tell the panels apart, UART / USB logs, GitHub issues).
+The default image is Tianma-only. Huaxing testers: flash `boot-huaxing.img`, and see [Panel SKUs](../README.md#panel-skus-tianma-vs-huaxing) in the README (how to tell the panels apart, UART / USB logs, GitHub issues).
 
 The Release rootfs is the **early minimal** image, not the later full GNOME desktop. After first boot run `passwd`. You can still build a newer image locally with `scripts/build-rootfs.sh`.
 
@@ -45,10 +45,10 @@ If `product` is not `ginkgo`, stop.
 
 ## First install (wipes userdata)
 
-Download the Release assets (example tag `v0.1.0`):
+Download the Release assets (example tag `v0.2.0`):
 
 ```bash
-gh release download v0.1.0 --repo Huabin1010/ginkgo-mainline-linux --dir out
+gh release download v0.2.0 --repo Huabin1010/ginkgo-mainline-linux --dir out
 # or the browser: https://github.com/Huabin1010/ginkgo-mainline-linux/releases
 cd out && sha256sum -c SHA256SUMS
 sudo apt install zstd
@@ -113,6 +113,8 @@ USB RNDIS: phone `192.168.7.2`, host `192.168.7.1`.
 # or: ssh -b 192.168.7.1 root@192.168.7.2
 ```
 
+Type-C keyboard/mouse needs an OTG adapter. On the phone run `ginkgo-usb-host.sh` — SSH drops until reboot.
+
 Serial (optional, **1.8 V only**): `ttyMSM0,115200n8`. Wiring: [UART guide](ginkgo-usb-ttl-uart.md).
 
 ## Restore Android
@@ -139,7 +141,7 @@ Interface: GitHub Releases REST API, wrapped by `gh`.
 
 ```bash
 gh auth login          # once; git SSH is not enough for the API
-./scripts/publish-release.sh v0.1.0
+./scripts/publish-release.sh v0.2.0
 ```
 
 The script uploads `out/boot.img`, `out/dtbo-empty.img`, and `SHA256SUMS`. If `out/boot-huaxing.img` exists, that is uploaded too. If `out/rootfs.ext4` exists, it compresses it to `rootfs.ext4.zst` (GitHub rejects a raw 2 GiB file) and uploads that too.

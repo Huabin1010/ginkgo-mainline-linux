@@ -4,7 +4,7 @@
 
 Mainline Linux bring-up for **Xiaomi Redmi Note 8** (codename **ginkgo**, Qualcomm **SM6125**).
 
-This tree builds Linux 7.0 + an Ubuntu 26.04 arm64 rootfs, then flashes them onto the phone. Display, touch, Wi-Fi, GNOME, Adreno 610, and Docker are already working on **Tianma NT36672A** units.
+This tree builds Linux 7.0 + an Ubuntu 26.04 arm64 rootfs, then flashes them onto the phone. On **Tianma NT36672A** units, display, touch, Wi-Fi, GNOME, Adreno 610, and Docker already work. The default `boot.img` is that Tianma build: DSI comes up with `power mode 0x9c` / `LANE_STATUS 0x1f00`, fbcon paints the kernel log, and Type-C stays USB gadget (RNDIS/SSH) unless you switch it to host.
 
 | Stage | Goal | Status |
 |-------|------|--------|
@@ -23,9 +23,22 @@ Hardware notes, UART wiring, and the full bring-up story live under [`docs/`](do
 
 ## Panel SKUs (Tianma vs Huaxing)
 
-ginkgo shipped with more than one display. The default `boot.img` is brought up on **Tianma NT36672A** (1080×2340). A **Huaxing / CSOT FT8719** phone will likely stay black on that image — same DSI connector, different panel IC and init sequence.
+ginkgo shipped with more than one display. Same DSI connector, different panel IC and init sequence.
 
-GitHub [Releases](https://github.com/Huabin1010/ginkgo-mainline-linux/releases) also ship an experimental **`boot-huaxing.img`**. Touch is off in that build. It is a first test, not a supported desktop image.
+| Image | Panel | Status |
+|-------|--------|--------|
+| `boot.img` (default) | **Tianma NT36672A** 1080×2340 | Supported. Display, fbcon, SPI touch, GNOME desktop. |
+| `boot-huaxing.img` | **Huaxing / CSOT FT8719** | Display now lights up (pclk locked to the proven Tianma 183012 kHz). Touch is still off. Not a supported desktop image. |
+
+A Huaxing phone stays black on the Tianma `boot.img`. Flash `boot-huaxing.img` instead (prefer `fastboot boot` once before writing the partition).
+
+Type-C is USB gadget by default so SSH/RNDIS keep working. Keyboard/mouse needs an OTG adapter and, on the phone:
+
+```bash
+ginkgo-usb-host.sh
+```
+
+SSH drops until you reboot (or switch the role back to `device` and restart `usb-gadget-rndis`).
 
 On stock Android you can see which panel you have:
 
@@ -33,7 +46,7 @@ On stock Android you can see which panel you have:
 dmesg | grep -iE 'tianma|huaxing|ft8719|nt36672a|TP info'
 ```
 
-If Huaxing does not light up, open a [GitHub issue](https://github.com/Huabin1010/ginkgo-mainline-linux/issues/new) and attach the **boot log** (from power-on through DRM/panel probe). That is enough; no need for photos of the whole session.
+If a panel does not light up, open a [GitHub issue](https://github.com/Huabin1010/ginkgo-mainline-linux/issues/new) and attach the **boot log** (from power-on through DRM/panel probe). That is enough; no need for photos of the whole session.
 
 **UART (best if the screen is black).** 1.8 V only. Phone TX **TP0003** → adapter RX, phone RX **TP0012** → adapter TX, plus GND. Start capture **before** power-on. Wiring: [UART guide](docs/ginkgo-usb-ttl-uart.md).
 

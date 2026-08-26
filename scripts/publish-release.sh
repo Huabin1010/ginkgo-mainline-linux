@@ -10,7 +10,7 @@
 #   ./scripts/build-bootimg.sh             # produces out/boot.img
 #   ./scripts/build-bootimg-huaxing.sh     # optional: out/boot-huaxing.img
 #   ./scripts/make-empty-dtbo.sh           # produces out/dtbo-empty.img
-#   ./scripts/publish-release.sh v0.1.0
+#   ./scripts/publish-release.sh v0.2.0
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -75,7 +75,7 @@ NOTES="$WORKDIR/notes.md"
 cat > "$NOTES" <<EOF
 Images for **Xiaomi Redmi Note 8 (ginkgo)**.
 
-\`boot.img\` is the Tianma NT36672A build. \`boot-huaxing.img\` (if attached) is an experimental Huaxing FT8719 test kernel — display may stay black; file an issue with UART or \`dmesg\`.
+\`boot.img\` is the supported Tianma NT36672A build (display, touch, desktop). \`boot-huaxing.img\` (if attached) is the Huaxing FT8719 test kernel — display works on tester units; touch is off. File an issue with UART or \`dmesg\` if a panel stays black.
 
 Flash tutorial (EN): https://github.com/${REPO}/blob/main/docs/flash-guide.md
 刷机教程（中文）: https://github.com/${REPO}/blob/main/docs/zh-CN/flash-guide.md
