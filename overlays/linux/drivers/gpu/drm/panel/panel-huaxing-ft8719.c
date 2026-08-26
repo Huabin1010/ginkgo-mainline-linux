@@ -206,6 +206,14 @@ static int huaxing_ft8719_enable(struct drm_panel *panel)
 		dev_info(panel->dev, "power mode readback: %#x\n", power_mode);
 
 	dev_info(panel->dev, "panel init complete (huaxing ft8719)\n");
+
+	/*
+	 * Same post-init delay as ginkgo Tianma. Without it the 14nm HS
+	 * cycle runs while FT8719 is still settling: LANE_ST stays 0x1f1f
+	 * for 8 retries (~250 ms extra black screen).
+	 */
+	msleep(120);
+
 	return 0;
 }
 

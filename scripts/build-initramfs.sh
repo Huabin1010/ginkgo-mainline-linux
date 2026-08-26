@@ -26,7 +26,9 @@ if [[ -d "$ROOT/rootfs-overlay" ]]; then
 	chmod 755 "$STAGING/overlay/usr/local/sbin/usb-gadget-rndis.sh" \
 		"$STAGING/overlay/usr/local/sbin/mount-persist.sh" \
 		"$STAGING/overlay/usr/local/sbin/ensure-root-password.sh" \
-		"$STAGING/overlay/usr/local/sbin/ginkgo-wifi-setup.sh"
+		"$STAGING/overlay/usr/local/sbin/ginkgo-wifi-setup.sh" \
+		"$STAGING/overlay/usr/local/sbin/ginkgo-usb-host.sh" \
+		"$STAGING/overlay/usr/local/sbin/display-unblank.sh"
 	mkdir -p "$STAGING/overlay/etc/systemd/system/"{sysinit.target.wants,multi-user.target.wants}
 	ln -sfn ../usb-gadget-rndis.service \
 		"$STAGING/overlay/etc/systemd/system/sysinit.target.wants/usb-gadget-rndis.service"

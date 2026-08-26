@@ -21,3 +21,9 @@
 		status = "disabled";
 	};
 };
+
+&usb3_dwc3 {
+	dr_mode = "otg";
+	usb-role-switch;
+	role-switch-default-mode = "peripheral";
+};
