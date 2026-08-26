@@ -23,6 +23,8 @@ ln -sf ../init "$STAGING/sbin/init"
 if [[ -d "$ROOT/rootfs-overlay" ]]; then
 	echo "==> Adding rootfs-overlay to initramfs"
 	cp -a "$ROOT/rootfs-overlay/." "$STAGING/overlay/"
+	# Never ship the local root password in a public boot.img.
+	rm -f "$STAGING/overlay/etc/ginkgo-root-password"
 	chmod 755 "$STAGING/overlay/usr/local/sbin/usb-gadget-rndis.sh" \
 		"$STAGING/overlay/usr/local/sbin/mount-persist.sh" \
 		"$STAGING/overlay/usr/local/sbin/ensure-root-password.sh" \
