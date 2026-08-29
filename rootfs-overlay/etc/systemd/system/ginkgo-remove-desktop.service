@@ -1,0 +1,13 @@
+[Unit]
+Description=Mask GDM and purge Ubuntu GNOME desktop packages
+After=local-fs.target
+ConditionPathExists=!/var/lib/ginkgo-remove-desktop.done
+
+[Service]
+Type=simple
+Nice=19
+IOSchedulingClass=idle
+ExecStart=/usr/local/sbin/ginkgo-remove-desktop.sh
+
+[Install]
+WantedBy=multi-user.target

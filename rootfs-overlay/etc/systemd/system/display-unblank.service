@@ -1,12 +1,16 @@
 [Unit]
-Description=Unblank msm DRM framebuffer (fb0)
-After=local-fs.target
-Before=getty.target
+Description=Ginkgo status HUD and Volume-Up reboot-fastboot
+After=local-fs.target systemd-udev-settle.service NetworkManager.service
+Wants=NetworkManager.service
+Conflicts=gdm.service gdm3.service display-manager.service
 
 [Service]
-Type=oneshot
+Type=simple
 ExecStart=/usr/local/sbin/display-unblank.sh
-RemainAfterExit=yes
+Restart=on-failure
+RestartSec=1
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

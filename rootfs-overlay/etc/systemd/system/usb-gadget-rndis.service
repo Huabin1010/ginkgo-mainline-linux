@@ -2,7 +2,8 @@
 Description=USB RNDIS network gadget (host debugging)
 After=sys-kernel-config.mount systemd-modules-load.service
 Wants=network-pre.target
-Before=network.target ssh.service
+Before=network.target ssh.service shutdown.target reboot.target
+Conflicts=shutdown.target reboot.target halt.target poweroff.target
 DefaultDependencies=no
 
 [Service]

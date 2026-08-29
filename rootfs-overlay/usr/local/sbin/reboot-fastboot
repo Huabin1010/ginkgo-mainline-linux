@@ -1,4 +1,16 @@
 #!/bin/sh
 # Reboot into Qualcomm/Android fastboot (bootloader).
 # Requires kernel: CONFIG_POWER_RESET_MSM + CONFIG_POWER_RESET_QCOM_PON.
+#
+# Unbind the RNDIS gadget first. reboot bootloader is a PMIC warm reset
+# (PS_HOLD); it does not power-cycle QUSB2 the way Vol- + Power does.
+# If D+ is still pulled up, the host never drops 1d6b:0104 and ABL
+# enumerates as fastboot but bulk flash/boot transfers fail.
+
+GADGET_UDC=/sys/kernel/config/usb_gadget/ginkgo/UDC
+if [ -e "$GADGET_UDC" ]; then
+	echo "" > "$GADGET_UDC" 2>/dev/null || true
+	sleep 0.5
+fi
+
 exec /sbin/reboot bootloader

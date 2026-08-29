@@ -30,8 +30,41 @@ if [[ -d "$ROOT/rootfs-overlay" ]]; then
 		"$STAGING/overlay/usr/local/sbin/ensure-root-password.sh" \
 		"$STAGING/overlay/usr/local/sbin/ginkgo-wifi-setup.sh" \
 		"$STAGING/overlay/usr/local/sbin/ginkgo-usb-host.sh" \
-		"$STAGING/overlay/usr/local/sbin/display-unblank.sh"
+		"$STAGING/overlay/usr/local/sbin/display-unblank.sh" \
+		"$STAGING/overlay/usr/local/sbin/ginkgo-wifi-connect.sh" \
+		"$STAGING/overlay/usr/local/sbin/ginkgo-remove-desktop.sh"
 	mkdir -p "$STAGING/overlay/etc/systemd/system/"{sysinit.target.wants,multi-user.target.wants}
+
+	echo "==> Compiling aarch64 ginkgo-status HUD"
+	GLES_SYS=""
+	for d in "$ROOT/out/sysroot-aarch64" \
+		"$HOME/Projects/xiaomi5-android-mainline/out/sysroot-aarch64"; do
+		if [[ -f "$d/usr/include/gbm.h" && -f "$d/usr/lib/aarch64-linux-gnu/libGLESv2.so" ]]; then
+			GLES_SYS="$d"
+			break
+		fi
+	done
+	if [[ -n "$GLES_SYS" ]]; then
+		GLES_INC="$GLES_SYS/usr/include"
+		GLES_LIB="$GLES_SYS/usr/lib/aarch64-linux-gnu"
+		echo "==> HUD GBM/GLES2 via $GLES_SYS"
+		"$CC" -O2 -Wall -Wextra \
+			-I"$GLES_INC" -I"$GLES_INC/libdrm" \
+			-L"$GLES_LIB" -Wl,-rpath-link,"$GLES_LIB" \
+			-o "$STAGING/overlay/usr/local/sbin/ginkgo-status" \
+			"$ROOT/initramfs/ginkgo-status.c" \
+			"$ROOT/initramfs/ginkgo-status-gpu.c" \
+			-lGLESv2 -lEGL -lgbm -ldrm -lm
+	else
+		echo "==> HUD CPU fb0 fallback (no GLES sysroot)"
+		"$CC" -static -O2 -Wall -Wextra -o \
+			"$STAGING/overlay/usr/local/sbin/ginkgo-status" \
+			"$ROOT/initramfs/ginkgo-status.c" \
+			"$ROOT/initramfs/ginkgo-status-gpu-stub.c" -lm
+	fi
+	chmod 755 "$STAGING/overlay/usr/local/sbin/ginkgo-status"
+	file "$STAGING/overlay/usr/local/sbin/ginkgo-status"
+
 	ln -sfn ../usb-gadget-rndis.service \
 		"$STAGING/overlay/etc/systemd/system/sysinit.target.wants/usb-gadget-rndis.service"
 	ln -sfn ../ensure-root-password.service \
@@ -40,6 +73,17 @@ if [[ -d "$ROOT/rootfs-overlay" ]]; then
 		"$STAGING/overlay/etc/systemd/system/multi-user.target.wants/ssh.service"
 	ln -sfn ../persist-mount.service \
 		"$STAGING/overlay/etc/systemd/system/multi-user.target.wants/persist-mount.service"
+	ln -sfn ../display-unblank.service \
+		"$STAGING/overlay/etc/systemd/system/multi-user.target.wants/display-unblank.service"
+	ln -sfn ../ginkgo-remove-desktop.service \
+		"$STAGING/overlay/etc/systemd/system/multi-user.target.wants/ginkgo-remove-desktop.service"
+	# Own the panel with the HUD. Never start GNOME / GDM / tty1 getty.
+	ln -sfn /lib/systemd/system/multi-user.target \
+		"$STAGING/overlay/etc/systemd/system/default.target"
+	ln -sfn /dev/null "$STAGING/overlay/etc/systemd/system/gdm.service"
+	ln -sfn /dev/null "$STAGING/overlay/etc/systemd/system/gdm3.service"
+	ln -sfn /dev/null "$STAGING/overlay/etc/systemd/system/display-manager.service"
+	ln -sfn /dev/null "$STAGING/overlay/etc/systemd/system/getty@tty1.service"
 fi
 
 # Adreno 610 firmware: overlay lands on userdata at switch_root; also

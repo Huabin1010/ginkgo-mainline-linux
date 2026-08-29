@@ -75,19 +75,18 @@ NOTES="$WORKDIR/notes.md"
 cat > "$NOTES" <<EOF
 Images for **Xiaomi Redmi Note 8 (ginkgo)**.
 
-\`boot.img\` is the supported Tianma NT36672A build (display, touch, desktop). \`boot-huaxing.img\` (if attached) is the Huaxing FT8719 test kernel — display works on tester units; touch is off. File an issue with UART or \`dmesg\` if a panel stays black.
+- \`boot.img\` — **Tianma NT36672A** (supported): display, SPI touch, GLES status HUD (GNOME/GDM masked). Volume-Up / \`reboot-fastboot\` writes ABL restart cookies and drops RNDIS before PS_HOLD.
+- \`boot-huaxing.img\` — **Huaxing FT8719** (test): display works; touch is off.
+
+Keep existing userdata. File an issue with UART or \`dmesg\` if a panel stays black.
 
 Flash tutorial (EN): https://github.com/${REPO}/blob/main/docs/flash-guide.md
 刷机教程（中文）: https://github.com/${REPO}/blob/main/docs/zh-CN/flash-guide.md
 
-\`rootfs.ext4\` is shipped as \`rootfs.ext4.zst\` (the raw 2 GiB file is over GitHub's limit). Unpack with \`zstd -d\`, then flash userdata.
-
 \`\`\`
 fastboot getvar product    # must be ginkgo
-zstd -d rootfs.ext4.zst
-fastboot flash userdata rootfs.ext4
 fastboot flash dtbo dtbo-empty.img
-fastboot flash boot boot.img
+fastboot flash boot boot.img          # or boot-huaxing.img
 fastboot reboot
 \`\`\`
 EOF
