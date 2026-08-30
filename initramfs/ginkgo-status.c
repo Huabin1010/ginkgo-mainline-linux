@@ -154,8 +154,9 @@ static int bl_max, bl_cur, bl_pct = -1, bl_keep = 80, dragging_bl;
 static char bl_path[192];
 static char bl_power_path[192];
 static int hud_dirty = 1;
-static uint64_t t_scan_input, t_unblank;
+static uint64_t t_scan_input, t_unblank, t_user, t_blank;
 static int screen_off;
+#define HUD_IDLE_OFF_NS 600000000000ull
 static int mt_got_pos;
 static unsigned long rx_bps, tx_bps;
 static unsigned long long net_rx_b, net_tx_b;
@@ -224,6 +225,11 @@ static uint64_t nsec_now(void)
 
 	clock_gettime(CLOCK_MONOTONIC, &ts);
 	return (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+}
+
+static void note_user(void)
+{
+	t_user = nsec_now();
 }
 
 #define PERF_HITCH 8
@@ -833,27 +839,34 @@ static void sample_temp(void)
 
 static char batt_ua_path[192], batt_uv_path[192], batt_cap_path[192];
 static char batt_st_path[192];
+static char usb_i_path[192], usb_v_path[192];
 static int batt_cached;
 
-static void estimate_power(void)
+/* PMI632 USB_IN_I is a voltage. Android qpnp-smb5 publishes it as current_now
+ * with 1 V/A (µV == µA). Do not invent a CPU/GPU watt model. */
+#define USB_IN_UA_PER_UV	1
+
+static void find_iio_by_suffix(char *out, size_t outn, const char *suffix)
 {
-	int i, n = ncpu > 0 ? ncpu : 8;
-	float w = 1.20f; /* display + idle SoC, screen on */
+	DIR *d = opendir("/sys/bus/iio/devices");
+	struct dirent *ent;
 
-	for (i = 0; i < n && i < MAX_CPU; i++) {
-		float pct = cpu_core_t[i] / 100.0f;
+	out[0] = 0;
+	if (!d)
+		return;
+	while ((ent = readdir(d))) {
+		char path[256];
 
-		if (pct < 0.f)
-			pct = 0.f;
-		/* Kryo 260: cpu0–3 A53, cpu4–7 A73 */
-		w += pct * ((i < 4) ? 0.38f : 0.90f);
+		if (strncmp(ent->d_name, "iio:device", 10))
+			continue;
+		snprintf(path, sizeof(path), "/sys/bus/iio/devices/%s/%s",
+			 ent->d_name, suffix);
+		if (access(path, R_OK) == 0) {
+			snprintf(out, outn, "%s", path);
+			break;
+		}
 	}
-	if (gpu_ok && gpu_t > 0.f)
-		w += (gpu_t / 100.0f) * 2.00f;
-	if (w < 0.4f)
-		w = 0.4f;
-	batt_mw = (int)(w * 1000.0f + 0.5f);
-	batt_ok = 1;
+	closedir(d);
 }
 
 static void sample_batt(void)
@@ -904,6 +917,10 @@ static void sample_batt(void)
 			batt_ua_path[0] = 0;
 			batt_uv_path[0] = 0;
 		}
+		find_iio_by_suffix(usb_i_path, sizeof(usb_i_path),
+				   "in_voltage_usb_in_i_uv_input");
+		find_iio_by_suffix(usb_v_path, sizeof(usb_v_path),
+				   "in_voltage_usb_in_v_div_16_input");
 	}
 	if (batt_cap_path[0]) {
 		cap = read_long(batt_cap_path);
@@ -921,17 +938,47 @@ static void sample_batt(void)
 			}
 		}
 	}
-	if (batt_ua_path[0] && batt_uv_path[0]) {
-		ua = read_long(batt_ua_path);
-		uv = read_long(batt_uv_path);
-		if (uv >= 1000000 && ua != -1) {
-			batt_mw = (int)((labs(ua) * (unsigned long long)uv) /
-					1000000000ull);
+	{
+		long usb_i_uv = -1, usb_v_uv = -1;
+		long long p_uw = 0;
+		int have = 0;
+
+		if (batt_ua_path[0] && batt_uv_path[0]) {
+			ua = read_long(batt_ua_path);
+			uv = read_long(batt_uv_path);
+		} else {
+			ua = -1;
+			uv = -1;
+		}
+		if (usb_i_path[0])
+			usb_i_uv = read_long(usb_i_path);
+		if (usb_v_path[0])
+			usb_v_uv = read_long(usb_v_path);
+
+		/* USB VBUS present: system power = USB in − battery charge. */
+		if (usb_v_uv >= 4000000 && usb_i_uv >= 0) {
+			long usb_ua = usb_i_uv * USB_IN_UA_PER_UV;
+
+			p_uw += (long long)usb_ua * (long long)usb_v_uv;
+			have = 1;
+			if (uv >= 1000000 && ua != -1)
+				p_uw -= (long long)ua * (long long)uv;
+		} else if (uv >= 1000000 && ua != -1 && labs(ua) >= 1000) {
+			p_uw = (long long)labs(ua) * (long long)uv;
+			have = 1;
+		}
+
+		if (have) {
+			if (p_uw < 0)
+				p_uw = -p_uw;
+			batt_mw = (int)(p_uw / 1000000000ll);
 			batt_ok = 1;
 			return;
 		}
 	}
-	estimate_power();
+	if (batt_pct >= 0)
+		batt_ok = 1;
+	batt_mw = -1;
 }
 
 static void sample_ram(void)
@@ -1782,6 +1829,53 @@ static void reset_touch(void)
 	mt_bind_slot = -1;
 }
 
+static void gpu_runtime_pin(int pin)
+{
+	const char *s = pin ? "on\n" : "auto\n";
+
+	write_sysfs("/sys/devices/platform/soc@0/5900000.gpu/power/control", s);
+	write_sysfs("/sys/class/drm/card0/device/power/control", s);
+}
+
+static void cpu_idle_blank(int off)
+{
+	static char saved[MAX_CPU][32];
+	static const char *gov[MAX_CPU];
+	int i, n = ncpu > 0 ? ncpu : 8;
+
+	if (n > MAX_CPU)
+		n = MAX_CPU;
+	for (i = 0; i < n; i++) {
+		char path[80];
+
+		snprintf(path, sizeof(path),
+			 "/sys/devices/system/cpu/cpu%d/cpufreq/scaling_governor",
+			 i);
+		if (off) {
+			int fd = open(path, O_RDONLY | O_CLOEXEC);
+			ssize_t nread;
+
+			if (fd >= 0) {
+				nread = read(fd, saved[i], sizeof(saved[i]) - 1);
+				close(fd);
+				if (nread > 0) {
+					while (nread > 0 &&
+					       (saved[i][nread - 1] == '\n' ||
+						saved[i][nread - 1] == '\r'))
+						nread--;
+					saved[i][nread] = 0;
+					gov[i] = saved[i];
+				}
+			}
+			write_sysfs(path, "powersave\n");
+		} else if (gov[i] && gov[i][0]) {
+			write_sysfs(path, gov[i]);
+		} else {
+			write_sysfs(path, "schedutil\n");
+		}
+	}
+}
+
 static void set_screen(int on)
 {
 	if (on) {
@@ -1790,9 +1884,13 @@ static void set_screen(int on)
 		screen_off = 0;
 		reset_touch();
 		t_unblank = nsec_now();
+		note_user();
 		dragging = 0;
 		dragging_bl = 0;
 		contact_armed = 0;
+		cpu_idle_blank(0);
+		ensure_gpu_open();
+		gpu_runtime_pin(1);
 		if (use_gl)
 			hud_gl_blank(0);
 		if (!use_gl) {
@@ -1811,9 +1909,16 @@ static void set_screen(int on)
 	if (screen_off)
 		return;
 	screen_off = 1;
+	t_blank = nsec_now();
 	if (dragging_bl)
 		bl_pct = bl_keep;
 	reset_touch();
+	gpu_runtime_pin(0);
+	cpu_idle_blank(1);
+	if (drm_fd >= 0) {
+		close(drm_fd);
+		drm_fd = -1;
+	}
 	if (bl_path[0])
 		write_sysfs(bl_path, "0\n");
 	bl_cur = 0;
@@ -3608,7 +3713,11 @@ static void handle_ev(int idx, uint16_t type, uint16_t code, int32_t value)
 	if (is_touch[idx] && t_unblank &&
 	    now - t_unblank < 250000000ull)
 		return;
+	if (!screen_off)
+		note_user();
 	if (screen_off) {
+		if (t_blank && now - t_blank < 3000000000ull)
+			return;
 		/* Only a real finger (id + x + y) wakes. Pressure
 		 * on empty slots and BTN_TOUCH emulation are hover junk. */
 		if (is_touch[idx] && has_mt[idx] && type == EV_ABS) {
@@ -4224,6 +4333,9 @@ static void draw_home(void)
 	else if (batt_ok && batt_mw >= 0)
 		snprintf(line, sizeof(line), "%s  %s  ·  %s  %.1f W",
 			 T("已运行", "up"), up, T("功耗", "PWR"), batt_mw / 1000.0f);
+	else if (batt_pct >= 0)
+		snprintf(line, sizeof(line), "%s  %s  ·  %d%%",
+			 T("已运行", "up"), up, batt_pct);
 	else
 		snprintf(line, sizeof(line), "%s  %s", T("已运行", "up"), up);
 	draw_text(&font_body, 48, 140, line, px(140, 150, 165));
@@ -4639,6 +4751,8 @@ int main(void)
 	sample_uptime();
 	wifi_radio();
 	logmsg("hud running");
+	note_user();
+	t_unblank = nsec_now();
 	for (;;) {
 		uint64_t now = nsec_now();
 		float dt = (float)(now - last) / 1e9f;
@@ -4655,6 +4769,11 @@ int main(void)
 		last = now;
 		pulse += dt;
 		drain_inputs();
+		now = nsec_now();
+		if (!screen_off && !connecting && !wifi.busy &&
+		    sheet_tgt == SHEET_NONE &&
+		    now >= t_user && now - t_user > HUD_IDLE_OFF_NS)
+			set_screen(0);
 		if (now - t_scan_input > (npfd ? 8000000000ull : 1000000000ull)) {
 			scan_input();
 			t_scan_input = now;
@@ -4738,7 +4857,7 @@ int main(void)
 			hud_gl_stats(&nv, &nf, &wait_us, &wto);
 		}
 		t2 = nsec_now();
-		if (now - t_occ > 1000000000ull) {
+		if (!screen_off && now - t_occ > 1000000000ull) {
 			uint64_t ts = nsec_now();
 			unsigned us;
 

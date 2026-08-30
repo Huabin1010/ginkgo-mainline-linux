@@ -13,6 +13,7 @@
 #include <EGL/eglext.h>
 #include <GLES2/gl2.h>
 #include <drm_fourcc.h>
+#include <dirent.h>
 #include <fcntl.h>
 #include <gbm.h>
 #include <stddef.h>
@@ -63,6 +64,7 @@ static int kms_fd = -1;
 static uint32_t conn_id, crtc_id;
 static drmModeModeInfo mode;
 static int gl_w, gl_h, crtc_set, flip_done;
+static int gl_runtime_off;
 static struct gbm_device *gbm;
 static struct gbm_surface *gsurf;
 static struct gbm_bo *bo_prev, *bo_cur;
@@ -807,14 +809,93 @@ void hud_gl_stats(int *nverts_out, int *nflushes, int *wait_us, int *wait_to)
 		*wait_to = stat_wait_to;
 }
 
+static int write_file(const char *path, const char *s)
+{
+	int fd = open(path, O_WRONLY | O_CLOEXEC);
+	ssize_t n;
+
+	if (fd < 0)
+		return -1;
+	n = write(fd, s, strlen(s));
+	close(fd);
+	return n < 0 ? -1 : 0;
+}
+
+static int panel_dcs_sleep(int off)
+{
+	DIR *d = opendir("/sys/bus/mipi-dsi/devices");
+	struct dirent *ent;
+	char path[160];
+	int ok = -1;
+
+	if (!d)
+		return -1;
+	while ((ent = readdir(d))) {
+		if (ent->d_name[0] == '.')
+			continue;
+		snprintf(path, sizeof(path),
+			 "/sys/bus/mipi-dsi/devices/%s/panel_sleep", ent->d_name);
+		if (access(path, W_OK) != 0)
+			continue;
+		ok = write_file(path, off ? "1\n" : "0\n");
+		break;
+	}
+	closedir(d);
+	return ok;
+}
+
+static int disable_crtc(void)
+{
+	if (kms_fd < 0 || !crtc_id)
+		return -1;
+	return drmModeSetCrtc(kms_fd, crtc_id, 0, 0, 0, NULL, 0, NULL);
+}
+
 void hud_gl_blank(int off)
 {
+	uint32_t fb;
+
 	/*
-	 * Keep CRTC scanning the last frame. Disabling scanout
-	 * (SetCrtc fb=0) retrains DSI: white lines on the right and
-	 * capacitive ghosts along x=max.
+	 * 0x28 first while DSI is up, then drop CRTC so MSM runtime-suspends
+	 * MDP/DSI. Panel unprepare no longer GPIO-resets (incell). Unblank
+	 * modesets first so enable() can send 0x29 with the host on.
 	 */
-	(void)off;
+	if (off) {
+		if (panel_dcs_sleep(1) != 0)
+			gl_log("panel sleep failed");
+		if (egl_dpy != EGL_NO_DISPLAY &&
+		    eglGetCurrentContext() != EGL_NO_CONTEXT)
+			glFinish();
+		if (disable_crtc() != 0)
+			gl_log("CRTC disable failed");
+		crtc_set = 0;
+		if (egl_dpy != EGL_NO_DISPLAY) {
+			eglMakeCurrent(egl_dpy, EGL_NO_SURFACE, EGL_NO_SURFACE,
+				       EGL_NO_CONTEXT);
+			gl_runtime_off = 1;
+		}
+		gl_log("display runtime off");
+		return;
+	}
+	if (gl_runtime_off && egl_dpy != EGL_NO_DISPLAY &&
+	    egl_surf != EGL_NO_SURFACE && egl_ctx != EGL_NO_CONTEXT) {
+		if (!eglMakeCurrent(egl_dpy, egl_surf, egl_surf, egl_ctx))
+			gl_log("eglMakeCurrent resume failed");
+	}
+	gl_runtime_off = 0;
+	if (kms_fd >= 0 && crtc_id && bo_prev &&
+	    (fb = fb_from_bo(bo_prev)) != 0) {
+		if (drmModeSetCrtc(kms_fd, crtc_id, fb, 0, 0, &conn_id, 1,
+				   &mode) == 0)
+			crtc_set = 1;
+		else {
+			gl_log("SetCrtc resume failed");
+			crtc_set = 0;
+		}
+	} else {
+		crtc_set = 0;
+	}
+	gl_log("display runtime on");
 }
 
 void hud_gl_shutdown(void)

@@ -142,6 +142,11 @@ CONFIG_MAGIC_SYSRQ=y
 CONFIG_POWER_RESET_MSM=y
 CONFIG_POWER_RESET_QCOM_PON=y
 
+# PMI632 QG LAST_ADC → /sys/class/power_supply/qcom-battery
+CONFIG_POWER_SUPPLY=y
+CONFIG_QCOM_SPMI_ADC5=y
+CONFIG_BATTERY_QCOM_PMI632_QG=y
+
 # PM6125 power key + volume-down (resin). The pwrkey reboot notifier
 # sets PON_PS_HOLD reset type to SHUTDOWN (4) on poweroff. Without this,
 # msm-poweroff only drops PS_HOLD as a reset, so Ubuntu "关机" boots again.

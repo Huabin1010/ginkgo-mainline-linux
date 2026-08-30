@@ -12,10 +12,12 @@
  */
 
 #include <linux/delay.h>
+#include <linux/device.h>
 #include <linux/gpio/consumer.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/regulator/consumer.h>
+#include <linux/sysfs.h>
 
 #include <drm/drm_mipi_dsi.h>
 #include <drm/drm_modes.h>
@@ -52,6 +54,8 @@ struct huaxing_ft8719 {
 	struct mipi_dsi_device *dsi;
 	struct regulator_bulk_data supplies[ARRAY_SIZE(regulator_names)];
 	struct gpio_desc *reset_gpio;
+	bool inited;
+	bool asleep;
 };
 
 static inline struct huaxing_ft8719 *to_huaxing_ft8719(struct drm_panel *panel)
@@ -152,7 +156,7 @@ static const struct ft8719_cmd on_cmds[] = {
 	  .data = { MIPI_DCS_WRITE_POWER_SAVE, 0x00 } },
 };
 
-static const struct ft8719_cmd off_cmds[] = {
+static const struct ft8719_cmd off_cmds[] __maybe_unused = {
 	{ .type = FT8719_PKT_DCS_SHORT, .len = 2,
 	  .data = { MIPI_DCS_WRITE_CONTROL_DISPLAY, 0x24 } },
 	{ .type = FT8719_PKT_DCS_LONG,  .len = 2, .wait_ms = 20,
@@ -169,6 +173,9 @@ static int huaxing_ft8719_prepare(struct drm_panel *panel)
 {
 	struct huaxing_ft8719 *ctx = to_huaxing_ft8719(panel);
 	int ret;
+
+	if (ctx->inited)
+		return 0;
 
 	ret = regulator_bulk_enable(ARRAY_SIZE(ctx->supplies), ctx->supplies);
 	if (ret < 0)
@@ -193,6 +200,15 @@ static int huaxing_ft8719_enable(struct drm_panel *panel)
 	u8 power_mode = 0;
 	int err;
 
+	if (ctx->inited) {
+		err = mipi_dsi_dcs_set_display_on(ctx->dsi);
+		if (err < 0)
+			dev_err(panel->dev, "resume 0x29 failed: %d\n", err);
+		msleep(20);
+		ctx->asleep = false;
+		return err;
+	}
+
 	err = huaxing_ft8719_send_cmds(ctx, on_cmds, ARRAY_SIZE(on_cmds));
 	if (err < 0) {
 		dev_err(panel->dev, "failed to send DCS init: %d\n", err);
@@ -207,12 +223,9 @@ static int huaxing_ft8719_enable(struct drm_panel *panel)
 
 	dev_info(panel->dev, "panel init complete (huaxing ft8719)\n");
 
-	/*
-	 * Same post-init delay as ginkgo Tianma. Without it the 14nm HS
-	 * cycle runs while FT8719 is still settling: LANE_ST stays 0x1f1f
-	 * for 8 retries (~250 ms extra black screen).
-	 */
 	msleep(120);
+	ctx->inited = true;
+	ctx->asleep = false;
 
 	return 0;
 }
@@ -225,25 +238,57 @@ static int huaxing_ft8719_disable(struct drm_panel *panel)
 	err = mipi_dsi_dcs_set_display_off(ctx->dsi);
 	if (err < 0)
 		dev_err(panel->dev, "set_display_off failed: %d\n", err);
+	else
+		ctx->asleep = true;
 
 	return err;
 }
 
 static int huaxing_ft8719_unprepare(struct drm_panel *panel)
 {
-	struct huaxing_ft8719 *ctx = to_huaxing_ft8719(panel);
+	if (to_huaxing_ft8719(panel)->inited)
+		return 0;
+
+	/* First-boot failure path only. */
+	return 0;
+}
+
+static ssize_t panel_sleep_show(struct device *dev,
+				struct device_attribute *attr, char *buf)
+{
+	struct mipi_dsi_device *dsi = to_mipi_dsi_device(dev);
+	struct huaxing_ft8719 *ctx = mipi_dsi_get_drvdata(dsi);
+
+	(void)attr;
+	return sysfs_emit(buf, "%d\n", ctx->asleep);
+}
+
+static ssize_t panel_sleep_store(struct device *dev,
+				 struct device_attribute *attr,
+				 const char *buf, size_t count)
+{
+	struct mipi_dsi_device *dsi = to_mipi_dsi_device(dev);
+	struct huaxing_ft8719 *ctx = mipi_dsi_get_drvdata(dsi);
+	bool sleep;
 	int ret;
 
-	huaxing_ft8719_send_cmds(ctx, off_cmds, ARRAY_SIZE(off_cmds));
-
-	gpiod_set_value(ctx->reset_gpio, 1);
-
-	ret = regulator_bulk_disable(ARRAY_SIZE(ctx->supplies), ctx->supplies);
+	(void)attr;
+	ret = kstrtobool(buf, &sleep);
 	if (ret)
-		dev_err(panel->dev, "regulator_bulk_disable failed %d\n", ret);
-
-	return ret;
+		return ret;
+	if (sleep == ctx->asleep)
+		return count;
+	if (sleep)
+		ret = mipi_dsi_dcs_set_display_off(dsi);
+	else
+		ret = mipi_dsi_dcs_set_display_on(dsi);
+	if (ret < 0)
+		return ret;
+	ctx->asleep = sleep;
+	return count;
 }
+
+static DEVICE_ATTR_RW(panel_sleep);
 
 /*
  * Downstream porches: HFP=72 HSW=4 HBP=80, VFP=112 VSW=4 VBP=12, 1080x2340@60.
@@ -348,6 +393,10 @@ static int huaxing_ft8719_probe(struct mipi_dsi_device *dsi)
 		return ret;
 	}
 
+	ret = device_create_file(&dsi->dev, &dev_attr_panel_sleep);
+	if (ret)
+		dev_warn(&dsi->dev, "panel_sleep sysfs failed: %d\n", ret);
+
 	return 0;
 }
 
@@ -355,6 +404,8 @@ static void huaxing_ft8719_remove(struct mipi_dsi_device *dsi)
 {
 	struct huaxing_ft8719 *ctx = mipi_dsi_get_drvdata(dsi);
 	int ret;
+
+	device_remove_file(&dsi->dev, &dev_attr_panel_sleep);
 
 	ret = mipi_dsi_detach(dsi);
 	if (ret < 0)
