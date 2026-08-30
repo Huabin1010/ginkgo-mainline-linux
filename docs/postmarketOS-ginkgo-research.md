@@ -4,7 +4,7 @@
 
 > Research dates: 2026-08-04 (first version), 2026-08-04 (mainline + Ubuntu focus)  
 > Target device: Xiaomi Redmi Note 8 (codename: `ginkgo`)  
-> Project: `Kernel-Build`  
+> Project: `xiaomi-ginkgo-mainline`  
 > **Current goal:** mainline Linux → boot Ubuntu 26.04 LTS → usable touch + Wi-Fi
 
 ---

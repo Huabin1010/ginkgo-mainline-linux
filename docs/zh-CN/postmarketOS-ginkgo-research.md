@@ -4,7 +4,7 @@
 
 > 调研日期：2026-08-04（初版）、2026-08-04（主线 + Ubuntu 专项）  
 > 目标设备：Xiaomi Redmi Note 8 (codename: `ginkgo`)  
-> 项目：`Kernel-Build`  
+> 项目：`xiaomi-ginkgo-mainline`  
 > **当前目标：** 主线 Linux → 启动 Ubuntu 26.04 LTS → 可用触控 + WiFi
 
 ---
